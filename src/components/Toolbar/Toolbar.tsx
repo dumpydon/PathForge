@@ -10,7 +10,7 @@ import {
   type MovementMode,
 } from "../../core/types";
 import { ALGORITHM_INFO, ALGORITHM_ORDER } from "../../data/algorithmInfo";
-import type { PresetId } from "../../mazes/presets";
+import { PRESETS, type PresetId } from "../../mazes/presets";
 import type { PaintTool } from "../Grid/GridBoard";
 import { GridSizeControls } from "./GridSizeControls";
 
@@ -52,6 +52,7 @@ interface ToolbarProps {
   onRedo: () => void;
   onSpeedChange: (speed: number) => void;
   onResize: (rows: number, cols: number) => void;
+  scenarioLabel?: string;
 }
 
 const BASE_TOOLS: Array<{ id: PaintTool; label: string; swatch: string }> = [
@@ -79,6 +80,11 @@ export function Toolbar(props: ToolbarProps) {
       if (isValidTerrainCost(cost)) props.onCustomTerrainCostChange(cost);
     }
   };
+
+  const selectedPreset = PRESETS.find(
+    (preset) => preset.name.toLowerCase() === props.scenarioLabel?.toLowerCase(),
+  );
+  const selectedPresetId = selectedPreset ? selectedPreset.id : "";
 
   return (
     <section className="toolbar" aria-label="Pathfinding controls">
@@ -180,11 +186,46 @@ export function Toolbar(props: ToolbarProps) {
             </button>
           </div>
 
-          <button type="button" className="button" onClick={props.onReset}>
-            Reset search
+          <button
+            type="button"
+            className="button playback-action-btn"
+            onClick={props.onReset}
+          >
+            <svg
+              className="playback-btn-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M 13.5 8.5 A 5.5 5.5 0 1 1 8 2.5 c 2.2 0 4.1 1.1 5.1 2.8" />
+              <polyline points="13.5 2 13.5 5.5 10 5.5" />
+            </svg>
+            <span>Reset search</span>
           </button>
-          <button type="button" className="button" onClick={props.onClear}>
-            Clear board
+          <button
+            type="button"
+            className="button playback-action-btn"
+            onClick={props.onClear}
+          >
+            <svg
+              className="playback-btn-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M 2.5 13.5 h 11" />
+              <path d="M 4.8 13.5 L 2.8 11.5 a 1.2 1.2 0 0 1 0 -1.7 L 8.3 4.3 a 1.2 1.2 0 0 1 1.7 0 l 2.7 2.7 a 1.2 1.2 0 0 1 0 1.7 L 9 13.5 Z" />
+              <line x1="6.2" y1="8.8" x2="9.4" y2="12" />
+            </svg>
+            <span>Clear board</span>
           </button>
         </div>
 
@@ -218,29 +259,6 @@ export function Toolbar(props: ToolbarProps) {
               </button>
             ))}
           </div>
-
-          <div className="history-buttons" role="group" aria-label="Board history">
-            <button
-              type="button"
-              className="button history-btn"
-              onClick={props.onUndo}
-              disabled={!props.canUndo || !props.editingEnabled}
-              aria-label="Undo (Cmd/Ctrl + Z)"
-              title="Undo (Cmd/Ctrl + Z)"
-            >
-              <span aria-hidden="true">↶</span>
-            </button>
-            <button
-              type="button"
-              className="button history-btn"
-              onClick={props.onRedo}
-              disabled={!props.canRedo || !props.editingEnabled}
-              aria-label="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
-              title="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
-            >
-              <span aria-hidden="true">↷</span>
-            </button>
-          </div>
         </div>
 
         {props.paintTool === "custom" && (
@@ -262,17 +280,20 @@ export function Toolbar(props: ToolbarProps) {
         )}
 
         <label className="select-control preset-select">
-          <span className="control-label">Scenario</span>
-          <select defaultValue="" onChange={(event) => {
-            if (event.target.value) props.onPreset(event.target.value as PresetId);
-            event.target.value = "";
-          }}>
-            <option value="" disabled>Load preset…</option>
-            <option value="open">Open Field</option>
-            <option value="weighted">Weighted Detour</option>
-            <option value="maze">Narrow Maze</option>
-            <option value="dense">Dense Obstacles</option>
-            <option value="no-path">No Path</option>
+          <span className="sr-only">Presets</span>
+          <select
+            value={selectedPresetId}
+            aria-label="Presets"
+            onChange={(event) => {
+              if (event.target.value) props.onPreset(event.target.value as PresetId);
+            }}
+          >
+            <option value="" disabled>Presets...</option>
+            {PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -296,11 +317,61 @@ export function Toolbar(props: ToolbarProps) {
             className="maze-btn recursive-division-button"
             onClick={props.onRecursiveDivision}
           >
-            <span className="recursive-division-label">Recursive division</span>
+            <span className="recursive-division-label">Recursive Maze</span>
           </button>
         </div>
 
         <div className="toolbar-spacer" />
+
+        <div className="history-buttons" role="group" aria-label="Board history">
+          <button
+            type="button"
+            className="history-btn"
+            onClick={props.onUndo}
+            disabled={!props.canUndo || !props.editingEnabled}
+            aria-label="Undo (Cmd/Ctrl + Z)"
+            title="Undo (Cmd/Ctrl + Z)"
+          >
+            <svg
+              className="history-btn-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M 12 13.5 V 6 a 4 4 0 0 0 -8 0 v 7.5" />
+              <polyline points="1.2 9.7 4 13.5 6.8 9.7" />
+            </svg>
+            <span className="history-btn-label">Undo</span>
+          </button>
+          <button
+            type="button"
+            className="history-btn"
+            onClick={props.onRedo}
+            disabled={!props.canRedo || !props.editingEnabled}
+            aria-label="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
+            title="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
+          >
+            <svg
+              className="history-btn-icon"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M 4 13.5 V 6 a 4 4 0 0 1 8 0 v 7.5" />
+              <polyline points="9.2 9.7 12 13.5 14.8 9.7" />
+            </svg>
+            <span className="history-btn-label">Redo</span>
+          </button>
+        </div>
+
         <button type="button" className="button" onClick={props.onRunAll}>Run all</button>
       </div>
     </section>

@@ -78,7 +78,12 @@ export function GridBoard({
   return (
     <div className="grid-frame">
       <div
-        className="grid-board"
+        className={[
+          "grid-board",
+          dragMode === "start" || dragMode === "target" ? "is-dragging-endpoint" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={{ "--grid-cols": grid.cols } as CSSProperties}
         role="grid"
         aria-label={`${grid.rows} by ${grid.cols} pathfinding grid`}

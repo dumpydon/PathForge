@@ -2,6 +2,7 @@ import type { AlgorithmId } from "../algorithms/types";
 
 export interface AlgorithmInfo {
   name: string;
+  heading?: string;
   structure: string;
   time: string;
   timeNote?: string;
@@ -56,12 +57,17 @@ export const ALGORITHM_INFO: Record<AlgorithmId, AlgorithmInfo> = {
   },
   astar: {
     name: "A*",
-    structure: "Binary min heap",
-    time: "Worst case O((V + E) log V)",
-    space: "O(V + E)",
-    guaranteeLabel: "Minimum cost",
-    guaranteeValue: "Admissible heuristic",
-    summary: "Orders the frontier by accumulated cost plus an estimate to the target.",
+    heading: "A* Search",
+    structure: "Binary min-heap",
+    time: "O((V+E) log V)",
+    timeNote: "O(N log N) Heap operations occur while nodes and edges are processed.",
+    space: "O(V+E)",
+    spaceNote: "O(N) from the scores array, visited set, and min-heap space",
+    guaranteeLabel: "Shortest path",
+    guaranteeValue: "Guaranteed with a valid heuristic",
+    summary:
+      "A* explores the most promising node first using the path cost so far and an estimate of the distance to the target. This helps it search toward the goal instead of exploring equally in every direction. With a valid heuristic, A* finds the shortest path.",
+    summaryHighlight: "With a valid heuristic, A* finds the shortest path.",
   },
 };
 

@@ -421,7 +421,7 @@ export default function App() {
   }, [grid, replaceGrid]);
 
   const generateDivisionMaze = useCallback(() => {
-    replaceGrid(recursiveDivision(clearTerrain(grid)), "Recursive division");
+    replaceGrid(recursiveDivision(clearTerrain(grid)), "Recursive Maze");
   }, [grid, replaceGrid]);
 
   useEffect(() => {
@@ -575,6 +575,7 @@ export default function App() {
         onRecursiveDivision={generateDivisionMaze}
         onSpeedChange={setPlaybackSpeed}
         onResize={resizeGrid}
+        scenarioLabel={scenarioLabel}
       />
 
       <div className="workspace-meta">
