@@ -18,10 +18,28 @@ export function AlgorithmPanel({ algorithm, heuristic, movementMode }: Algorithm
         <h2>{info.name}</h2>
         <span className="algorithm-chip">{info.structure}</span>
       </div>
-      <p className="technical-summary">{info.summary}</p>
+      <p className="technical-summary">
+        {info.summaryHighlight && info.summary.includes(info.summaryHighlight) ? (
+          <>
+            {info.summary.slice(0, info.summary.indexOf(info.summaryHighlight))}
+            <span className="summary-highlight">{info.summaryHighlight}</span>
+            {info.summary.slice(info.summary.indexOf(info.summaryHighlight) + info.summaryHighlight.length)}
+          </>
+        ) : (
+          info.summary
+        )}
+      </p>
       <dl className="definition-grid">
-        <div><dt>Time</dt><dd>{info.time}</dd></div>
-        <div><dt>Space</dt><dd>{info.space}</dd></div>
+        <div>
+          <dt>Time</dt>
+          <dd title={info.timeNote}>{info.time}</dd>
+          {info.timeNote && <span className="definition-note">{info.timeNote}</span>}
+        </div>
+        <div>
+          <dt>Space</dt>
+          <dd title={info.spaceNote}>{info.space}</dd>
+          {info.spaceNote && <span className="definition-note">{info.spaceNote}</span>}
+        </div>
         <div className="definition-wide"><dt>{info.guaranteeLabel}</dt><dd>{info.guaranteeValue}</dd></div>
       </dl>
       {algorithm === "astar" && (

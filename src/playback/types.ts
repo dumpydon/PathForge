@@ -13,3 +13,14 @@ export interface PlaybackSnapshot {
   lastEvent: SearchEvent | null;
 }
 
+export type PlaybackStatus = "idle" | "running" | "paused" | "completed";
+
+export interface PlaybackTimeline {
+  readonly events: readonly SearchEvent[];
+  readonly stepBoundaries: readonly number[];
+  readonly totalSteps: number;
+  getSnapshotForStep: (stepIndex: number) => PlaybackSnapshot;
+  getSnapshotForCursor: (cursor: number) => PlaybackSnapshot;
+  getStepIndexForCursor: (cursor: number) => number;
+}
+

@@ -5,6 +5,7 @@ import {
   applySearchEvents,
   createPlaybackSnapshot,
   nextExpansionBoundary,
+  previousExpansionBoundary,
 } from "../playback/reducer";
 import { gridFromRows } from "./fixtures";
 
@@ -27,6 +28,16 @@ describe("playback reducer", () => {
     expect(stepEvents.some((event) => event.type === "expanded")).toBe(true);
     expect(stepEvents[stepEvents.length - 1].type).toBe("closed");
     expect(boundary).toBeLessThan(result.events.length);
+  });
+
+  it("rewinds to the previous expansion boundary", () => {
+    const result = bfs(gridFromRows(["S..T"]));
+    const firstBoundary = nextExpansionBoundary(result.events, 0);
+    const secondBoundary = nextExpansionBoundary(result.events, firstBoundary);
+
+    expect(secondBoundary).toBeGreaterThan(firstBoundary);
+    expect(previousExpansionBoundary(result.events, secondBoundary)).toBe(firstBoundary);
+    expect(previousExpansionBoundary(result.events, firstBoundary)).toBe(0);
   });
 });
 

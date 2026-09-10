@@ -3,6 +3,11 @@ import type { SearchResult } from "../../algorithms/types";
 interface MetricsPanelProps {
   result: SearchResult | null;
   frontierSize: number;
+  visitedCount?: number;
+  stepIndex?: number;
+  totalSteps?: number;
+  isComplete?: boolean;
+  isPlaying?: boolean;
   playbackEnabled: boolean;
   statusRevealToken: number;
 }
@@ -20,17 +25,43 @@ function formatPathCost(cost: number | null): string {
   return cost.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
-export function MetricsPanel({ result, frontierSize, playbackEnabled, statusRevealToken }: MetricsPanelProps) {
+export function MetricsPanel({
+  result,
+  frontierSize,
+  visitedCount,
+  stepIndex,
+  totalSteps,
+  isComplete,
+  isPlaying,
+  playbackEnabled,
+  statusRevealToken,
+}: MetricsPanelProps) {
+  let badgeText = "";
+  let badgeClass = "";
+
+  if (result) {
+    if (!playbackEnabled || isComplete) {
+      badgeText = result.found ? "Path Found" : "No Path Found";
+      badgeClass = result.found ? "status-found" : "status-missing";
+    } else if (isPlaying) {
+      badgeText = "Searching…";
+      badgeClass = "status-running";
+    } else if (stepIndex !== undefined && totalSteps !== undefined) {
+      badgeText = `Step ${stepIndex} / ${totalSteps}`;
+      badgeClass = "status-paused";
+    }
+  }
+
   return (
     <section className="panel-section metrics-panel">
       <div className="section-heading compact-heading">
         <h2>Run metrics</h2>
         {result && (
           <span
-            key={statusRevealToken}
-            className={`status-badge metrics-status ${result.found ? "status-found" : "status-missing"}`}
+            key={`${statusRevealToken}-${badgeText}`}
+            className={`status-badge metrics-status ${badgeClass}`}
           >
-            {result.found ? "Path Found" : "No Path Found"}
+            {badgeText}
           </span>
         )}
       </div>
@@ -47,9 +78,18 @@ export function MetricsPanel({ result, frontierSize, playbackEnabled, statusReve
       ) : (
         <p className="empty-copy">Run an algorithm to populate structural metrics.</p>
       )}
-      <div className="live-frontier">
-        <span>{playbackEnabled ? "Playback frontier" : "Playback events"}</span>
-        <strong>{playbackEnabled ? frontierSize : "Not recorded"}</strong>
+
+      <div className="live-metrics-row">
+        <div className="live-frontier">
+          <span>{playbackEnabled ? "Live frontier" : "Playback events"}</span>
+          <strong>{playbackEnabled ? frontierSize : "Not recorded"}</strong>
+        </div>
+        {playbackEnabled && visitedCount !== undefined && (
+          <div className="live-frontier">
+            <span>Live visited</span>
+            <strong>{visitedCount}</strong>
+          </div>
+        )}
       </div>
     </section>
   );

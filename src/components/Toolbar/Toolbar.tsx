@@ -21,6 +21,9 @@ interface ToolbarProps {
   paintTool: PaintTool;
   customTerrainCost: number;
   isPlaying: boolean;
+  isComplete: boolean;
+  stepIndex: number;
+  totalSteps: number;
   hasResult: boolean;
   playbackEnabled: boolean;
   editingEnabled: boolean;
@@ -35,12 +38,18 @@ interface ToolbarProps {
   onPause: () => void;
   onResume: () => void;
   onStep: () => void;
+  onPrevious: () => void;
+  onSeek: (stepIndex: number) => void;
   onReset: () => void;
   onClear: () => void;
   onRunAll: () => void;
   onPreset: (preset: PresetId) => void;
   onRandom: () => void;
   onRecursiveDivision: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   onSpeedChange: (speed: number) => void;
   onResize: (rows: number, cols: number) => void;
 }
@@ -52,6 +61,7 @@ const BASE_TOOLS: Array<{ id: PaintTool; label: string; swatch: string }> = [
 ];
 
 export function Toolbar(props: ToolbarProps) {
+  const [playClickToken, setPlayClickToken] = useState(0);
   const [customCostDraft, setCustomCostDraft] = useState(String(props.customTerrainCost));
   const customCostIsValid = /^\d+$/.test(customCostDraft) &&
     isValidTerrainCost(Number(customCostDraft));
@@ -103,21 +113,69 @@ export function Toolbar(props: ToolbarProps) {
           </label>
         )}
 
-        <div className="playback-actions">
-          <button type="button" className="button button-primary" onClick={props.onRun}>
-            <span aria-hidden="true">▶</span> Run
-          </button>
-          <button
-            type="button"
-            className="button"
-            onClick={props.isPlaying ? props.onPause : props.onResume}
-            disabled={!props.playbackEnabled || (!props.hasResult && !props.isPlaying)}
-          >
-            {props.isPlaying ? "Pause" : "Resume"}
-          </button>
-          <button type="button" className="button" onClick={props.onStep} disabled={!props.playbackEnabled}>
-            Step
-          </button>
+        <div className="playback-actions" role="region" aria-label="Playback controls">
+          {props.playbackEnabled && props.hasResult && props.totalSteps > 0 && (
+            <div className="timeline-stepper">
+              <span className="step-counter" aria-live="polite">
+                Step {props.stepIndex} / {props.totalSteps}
+              </span>
+              <input
+                type="range"
+                className="timeline-scrubber"
+                min={0}
+                max={props.totalSteps}
+                value={props.stepIndex}
+                onChange={(event) => props.onSeek(Number(event.target.value))}
+                aria-label="Visualization timeline scrubber"
+                title={`Timeline scrubber (Step ${props.stepIndex} of ${props.totalSteps})`}
+              />
+            </div>
+          )}
+
+          <div className="playback-button-group" role="group" aria-label="Step and playback controls">
+            <button
+              type="button"
+              className="button playback-btn"
+              onClick={props.onPrevious}
+              disabled={!props.playbackEnabled || props.stepIndex <= 0 || !props.hasResult}
+              aria-label="Previous step (Left Arrow)"
+              title="Previous step (Left Arrow)"
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+            <button
+              type="button"
+              className={`button playback-btn ${props.isPlaying ? "is-playing" : "button-primary"}`}
+              onClick={() => {
+                if (!props.isPlaying) {
+                  setPlayClickToken((token) => token + 1);
+                }
+                if (props.isPlaying) props.onPause();
+                else if (props.hasResult) props.onResume();
+                else props.onRun();
+              }}
+              disabled={!props.playbackEnabled || (props.isComplete && props.hasResult)}
+              aria-label={props.isPlaying ? "Pause (Space)" : "Play (Space)"}
+              title={props.isPlaying ? "Pause (Space)" : "Play (Space)"}
+            >
+              {playClickToken > 0 && (
+                <span key={playClickToken} className="play-btn-ripple" aria-hidden="true" />
+              )}
+              <span aria-hidden="true">{props.isPlaying ? "⏸" : "▶"}</span>
+              <span className="playback-btn-label">{props.isPlaying ? "Pause" : "Play"}</span>
+            </button>
+            <button
+              type="button"
+              className="button playback-btn"
+              onClick={props.onStep}
+              disabled={!props.playbackEnabled || (props.hasResult && props.stepIndex >= props.totalSteps)}
+              aria-label="Next step (Right Arrow)"
+              title="Next step (Right Arrow)"
+            >
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+
           <button type="button" className="button" onClick={props.onReset}>
             Reset search
           </button>
@@ -155,6 +213,29 @@ export function Toolbar(props: ToolbarProps) {
                 <span aria-hidden="true">{tool.swatch}</span>{tool.label}
               </button>
             ))}
+          </div>
+
+          <div className="history-buttons" role="group" aria-label="Board history">
+            <button
+              type="button"
+              className="button history-btn"
+              onClick={props.onUndo}
+              disabled={!props.canUndo || !props.editingEnabled}
+              aria-label="Undo (Cmd/Ctrl + Z)"
+              title="Undo (Cmd/Ctrl + Z)"
+            >
+              <span aria-hidden="true">↶</span>
+            </button>
+            <button
+              type="button"
+              className="button history-btn"
+              onClick={props.onRedo}
+              disabled={!props.canRedo || !props.editingEnabled}
+              aria-label="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
+              title="Redo (Cmd/Ctrl + Shift + Z / Ctrl + Y)"
+            >
+              <span aria-hidden="true">↷</span>
+            </button>
           </div>
         </div>
 

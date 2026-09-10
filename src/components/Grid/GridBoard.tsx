@@ -17,6 +17,8 @@ interface GridBoardProps {
   onInspect: (coordinate: Coordinate) => void;
   onPaint: (coordinate: Coordinate) => void;
   onMoveEndpoint: (endpoint: "start" | "target", coordinate: Coordinate) => void;
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
 }
 
 type DragMode = "paint" | "start" | "target" | null;
@@ -29,21 +31,31 @@ export function GridBoard({
   onInspect,
   onPaint,
   onMoveEndpoint,
+  onInteractionStart,
+  onInteractionEnd,
 }: GridBoardProps) {
   const [dragMode, setDragMode] = useState<DragMode>(null);
 
   useEffect(() => {
-    const stopDragging = () => setDragMode(null);
+    const stopDragging = () => {
+      setDragMode((currentMode) => {
+        if (currentMode !== null) {
+          onInteractionEnd?.();
+        }
+        return null;
+      });
+    };
     window.addEventListener("pointerup", stopDragging);
     window.addEventListener("pointercancel", stopDragging);
     return () => {
       window.removeEventListener("pointerup", stopDragging);
       window.removeEventListener("pointercancel", stopDragging);
     };
-  }, []);
+  }, [onInteractionEnd]);
 
   const beginInteraction = (event: PointerEvent, coordinate: Coordinate): void => {
     event.preventDefault();
+    onInteractionStart?.();
     onInspect(coordinate);
     if (coordinatesEqual(coordinate, grid.start)) {
       setDragMode("start");

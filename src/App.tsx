@@ -18,6 +18,7 @@ import { Toolbar } from "./components/Toolbar/Toolbar";
 import {
   clearTerrain,
   createCustomTerrain,
+  createGrid,
   moveEndpoint,
   setTerrain,
   terrainCost,
@@ -43,11 +44,37 @@ import {
   resizeBoard,
   type ComparisonResults,
 } from "./state/boardSession";
+import {
+  canRedo,
+  canUndo,
+  createBoardHistory,
+  gridsEqual,
+  pushBoardAction,
+  redoBoardAction,
+  undoBoardAction,
+  type BoardHistorySnapshot,
+  type BoardHistoryState,
+} from "./state/boardHistory";
 
 export default function App() {
   const [session, setSession] = useState(() =>
     createBoardSession(openFieldPreset(), "Random obstacles"),
   );
+  const sessionRef = useRef(session);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  const [boardHistory, setBoardHistory] = useState<BoardHistoryState>(() =>
+    createBoardHistory({
+      grid: openFieldPreset(),
+      scenarioLabel: "Random obstacles",
+      selectedCoordinate: openFieldPreset().start,
+    }),
+  );
+  const dragStartSnapshotRef = useRef<BoardHistorySnapshot | null>(null);
+
   const [isInitialGridReady, setIsInitialGridReady] = useState(false);
   const hasGeneratedInitialGrid = useRef(false);
   const [algorithm, setAlgorithm] = useState<AlgorithmId>("astar");
@@ -63,7 +90,16 @@ export default function App() {
     hasGeneratedInitialGrid.current = true;
 
     const initialGrid = randomObstacles(openFieldPreset());
-    setSession(createBoardSession(initialGrid, "Random obstacles"));
+    const initialSession = createBoardSession(initialGrid, "Random obstacles");
+    sessionRef.current = initialSession;
+    setSession(initialSession);
+    setBoardHistory(
+      createBoardHistory({
+        grid: initialGrid,
+        scenarioLabel: "Random obstacles",
+        selectedCoordinate: initialGrid.start,
+      }),
+    );
     setIsInitialGridReady(true);
   }, []);
 
@@ -87,7 +123,18 @@ export default function App() {
   const replaceGrid = useCallback(
     (nextGrid: Grid, label: string) => {
       resetPlayback();
-      setSession((current) => replaceBoard(current, nextGrid, label));
+      dragStartSnapshotRef.current = null;
+      const nextSnapshot: BoardHistorySnapshot = {
+        grid: nextGrid,
+        scenarioLabel: label,
+        selectedCoordinate: nextGrid.start,
+      };
+      setBoardHistory((current) => pushBoardAction(current, nextSnapshot));
+      setSession((current) => {
+        const next = replaceBoard(current, nextGrid, label);
+        sessionRef.current = next;
+        return next;
+      });
     },
     [resetPlayback],
   );
@@ -128,6 +175,19 @@ export default function App() {
     loadPlayback(result, false);
     stepPlayback();
   }, [activeResult, algorithm, benchmarkMode, grid, heuristic, loadPlayback, movementMode, stepPlayback]);
+
+  const previous = useCallback(() => {
+    if (benchmarkMode) return;
+    playback.previousStep();
+  }, [benchmarkMode, playback]);
+
+  const seek = useCallback(
+    (stepIndex: number) => {
+      if (benchmarkMode) return;
+      playback.seekStep(stepIndex);
+    },
+    [benchmarkMode, playback],
+  );
 
   const runAll = useCallback(() => {
     setLogoReplayToken((token) => token + 1);
@@ -174,6 +234,37 @@ export default function App() {
     setSession(resetBoardSearch);
   }, [movementMode, resetPlayback]);
 
+  const handleInteractionStart = useCallback(() => {
+    if (dragStartSnapshotRef.current === null) {
+      const currentSession = sessionRef.current;
+      dragStartSnapshotRef.current = {
+        grid: currentSession.grid,
+        scenarioLabel: currentSession.scenarioLabel,
+        selectedCoordinate: currentSession.selectedCoordinate,
+      };
+    }
+  }, []);
+
+  const handleInteractionEnd = useCallback(() => {
+    const startSnapshot = dragStartSnapshotRef.current;
+    dragStartSnapshotRef.current = null;
+    if (!startSnapshot) return;
+
+    const currentSession = sessionRef.current;
+    if (!gridsEqual(startSnapshot.grid, currentSession.grid)) {
+      setBoardHistory((current) =>
+        pushBoardAction(
+          { ...current, present: startSnapshot },
+          {
+            grid: currentSession.grid,
+            scenarioLabel: currentSession.scenarioLabel,
+            selectedCoordinate: currentSession.selectedCoordinate,
+          },
+        ),
+      );
+    }
+  }, []);
+
   const paint = useCallback(
     (coordinate: Coordinate) => {
       const terrain: Terrain = paintTool === "erase"
@@ -182,13 +273,28 @@ export default function App() {
         ? createCustomTerrain(customTerrainCost)
         : paintTool;
       resetPlayback();
-      setSession((current) => ({
-        ...current,
-        grid: setTerrain(current.grid, coordinate, terrain),
-        scenarioLabel: "Custom board",
-        comparisonResults: {},
-        activeResult: null,
-      }));
+      setSession((current) => {
+        const nextGrid = setTerrain(current.grid, coordinate, terrain);
+        const nextSession = {
+          ...current,
+          grid: nextGrid,
+          scenarioLabel: "Custom board",
+          comparisonResults: {},
+          activeResult: null,
+        };
+        sessionRef.current = nextSession;
+
+        if (dragStartSnapshotRef.current === null && !gridsEqual(current.grid, nextGrid)) {
+          setBoardHistory((hist) =>
+            pushBoardAction(hist, {
+              grid: nextGrid,
+              scenarioLabel: "Custom board",
+              selectedCoordinate: coordinate,
+            }),
+          );
+        }
+        return nextSession;
+      });
     },
     [customTerrainCost, paintTool, resetPlayback],
   );
@@ -196,26 +302,107 @@ export default function App() {
   const moveGridEndpoint = useCallback(
     (endpoint: "start" | "target", coordinate: Coordinate) => {
       resetPlayback();
-      setSession((current) => ({
-        ...current,
-        grid: moveEndpoint(current.grid, endpoint, coordinate),
-        selectedCoordinate: coordinate,
-        scenarioLabel: "Custom board",
-        comparisonResults: {},
-        activeResult: null,
-      }));
+      setSession((current) => {
+        const nextGrid = moveEndpoint(current.grid, endpoint, coordinate);
+        const nextSession = {
+          ...current,
+          grid: nextGrid,
+          selectedCoordinate: coordinate,
+          scenarioLabel: "Custom board",
+          comparisonResults: {},
+          activeResult: null,
+        };
+        sessionRef.current = nextSession;
+
+        if (dragStartSnapshotRef.current === null && !gridsEqual(current.grid, nextGrid)) {
+          setBoardHistory((hist) =>
+            pushBoardAction(hist, {
+              grid: nextGrid,
+              scenarioLabel: "Custom board",
+              selectedCoordinate: coordinate,
+            }),
+          );
+        }
+        return nextSession;
+      });
     },
     [resetPlayback],
   );
 
   const inspectCoordinate = useCallback((coordinate: Coordinate) => {
-    setSession((current) => ({ ...current, selectedCoordinate: coordinate }));
+    setSession((current) => {
+      const nextSession = { ...current, selectedCoordinate: coordinate };
+      sessionRef.current = nextSession;
+      return nextSession;
+    });
   }, []);
 
-  const resizeGrid = useCallback((rows: number, cols: number) => {
-    resetPlayback();
-    setSession((current) => resizeBoard(current, rows, cols));
-  }, [resetPlayback]);
+  const resizeGrid = useCallback(
+    (rows: number, cols: number) => {
+      resetPlayback();
+      dragStartSnapshotRef.current = null;
+      const newGrid = createGrid(rows, cols);
+      const label = `Custom · ${rows} × ${cols}`;
+      const nextSnapshot: BoardHistorySnapshot = {
+        grid: newGrid,
+        scenarioLabel: label,
+        selectedCoordinate: newGrid.start,
+      };
+      setBoardHistory((current) => pushBoardAction(current, nextSnapshot));
+      setSession((current) => {
+        const next = resizeBoard(current, rows, cols);
+        sessionRef.current = next;
+        return next;
+      });
+    },
+    [resetPlayback],
+  );
+
+  const undo = useCallback(() => {
+    if (benchmarkMode) return;
+    dragStartSnapshotRef.current = null;
+    setBoardHistory((current) => {
+      const result = undoBoardAction(current);
+      if (!result) return current;
+
+      resetPlayback();
+      const nextSession = {
+        ...sessionRef.current,
+        grid: result.restored.grid,
+        scenarioLabel: result.restored.scenarioLabel,
+        selectedCoordinate: result.restored.selectedCoordinate ?? result.restored.grid.start,
+        activeResult: null,
+        comparisonResults: {},
+      };
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+
+      return result.state;
+    });
+  }, [benchmarkMode, resetPlayback]);
+
+  const redo = useCallback(() => {
+    if (benchmarkMode) return;
+    dragStartSnapshotRef.current = null;
+    setBoardHistory((current) => {
+      const result = redoBoardAction(current);
+      if (!result) return current;
+
+      resetPlayback();
+      const nextSession = {
+        ...sessionRef.current,
+        grid: result.restored.grid,
+        scenarioLabel: result.restored.scenarioLabel,
+        selectedCoordinate: result.restored.selectedCoordinate ?? result.restored.grid.start,
+        activeResult: null,
+        comparisonResults: {},
+      };
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+
+      return result.state;
+    });
+  }, [benchmarkMode, resetPlayback]);
 
   const clearBoard = useCallback(() => {
     replaceGrid(clearTerrain(grid), "Open field");
@@ -239,16 +426,47 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName) || target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const isModifier = event.metaKey || event.ctrlKey;
+
+      if (isModifier && !event.altKey && event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      if (
+        (isModifier && !event.altKey && event.key.toLowerCase() === "z" && event.shiftKey) ||
+        (isModifier && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "y")
+      ) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const target = event.target as HTMLElement;
-      if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(target.tagName)) return;
 
       if (event.code === "Space") {
         event.preventDefault();
         if (benchmarkMode) runSelected();
         else if (playback.isPlaying) pausePlayback();
-        else if (activeResult) playPlayback();
+        else if (playback.isComplete) {
+          // Completed final state: do not restart
+        } else if (activeResult) playPlayback();
         else runSelected();
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        previous();
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        step();
       } else if (event.key.toLowerCase() === "r") {
         clearSearch();
       } else if (event.key.toLowerCase() === "c") {
@@ -260,11 +478,20 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyboard);
     return () => window.removeEventListener("keydown", handleKeyboard);
-  }, [activeResult, benchmarkMode, clearBoard, clearSearch, pausePlayback, playPlayback, playback.isPlaying, runSelected, step]);
+  }, [activeResult, benchmarkMode, clearBoard, clearSearch, pausePlayback, playPlayback, playback.isComplete, playback.isPlaying, previous, redo, runSelected, step, undo]);
 
   const selectedNode = selectedCoordinate
     ? playback.snapshot.nodes.get(coordinateKey(selectedCoordinate))
     : undefined;
+  const visitedCount = useMemo(() => {
+    let count = 0;
+    for (const node of playback.snapshot.nodes.values()) {
+      if (node.state === "closed" || node.state === "path") {
+        count += 1;
+      }
+    }
+    return count;
+  }, [playback.snapshot.nodes]);
   const hasWeightedTerrain = useMemo(
     () => grid.terrain.some((terrain) => terrain !== "wall" && terrainCost(terrain) > 1),
     [grid.terrain],
@@ -317,9 +544,16 @@ export default function App() {
         paintTool={paintTool}
         customTerrainCost={customTerrainCost}
         isPlaying={playback.isPlaying}
+        isComplete={playback.isComplete}
+        stepIndex={playback.stepIndex}
+        totalSteps={playback.totalSteps}
         hasResult={Boolean(activeResult)}
         playbackEnabled={!benchmarkMode}
         editingEnabled={!benchmarkMode}
+        canUndo={canUndo(boardHistory) && !benchmarkMode}
+        canRedo={canRedo(boardHistory) && !benchmarkMode}
+        onUndo={undo}
+        onRedo={redo}
         rows={grid.rows}
         cols={grid.cols}
         speed={playback.speed}
@@ -331,6 +565,8 @@ export default function App() {
         onPause={pausePlayback}
         onResume={playPlayback}
         onStep={step}
+        onPrevious={previous}
+        onSeek={seek}
         onReset={clearSearch}
         onClear={clearBoard}
         onRunAll={runAll}
@@ -349,7 +585,17 @@ export default function App() {
         </div>
         <div className="playback-progress">
           <span className={`activity-dot ${playback.isPlaying ? "is-running" : ""}`} />
-          <span>{benchmarkMode ? "Benchmark" : playback.isPlaying ? "Playing" : playback.isComplete ? "Complete" : "Paused"}</span>
+          <span>
+            {benchmarkMode
+              ? "Benchmark"
+              : playback.isPlaying
+              ? "Playing"
+              : playback.isComplete
+              ? "Complete"
+              : activeResult
+              ? `Step ${playback.stepIndex} of ${playback.totalSteps}`
+              : "Paused"}
+          </span>
           <code>{eventProgress} events</code>
         </div>
       </div>
@@ -383,6 +629,8 @@ export default function App() {
                 onInspect={inspectCoordinate}
                 onPaint={paint}
                 onMoveEndpoint={moveGridEndpoint}
+                onInteractionStart={handleInteractionStart}
+                onInteractionEnd={handleInteractionEnd}
               />
             )}
           </div>
@@ -405,6 +653,11 @@ export default function App() {
           <MetricsPanel
             result={activeResult}
             frontierSize={playback.snapshot.frontierSize}
+            visitedCount={visitedCount}
+            stepIndex={playback.stepIndex}
+            totalSteps={playback.totalSteps}
+            isComplete={playback.isComplete}
+            isPlaying={playback.isPlaying}
             playbackEnabled={!benchmarkMode}
             statusRevealToken={statusRevealToken}
           />
@@ -431,7 +684,10 @@ export default function App() {
       <footer className="app-footer">
         <p>Execution timing excludes animation and rendering. On small browser workloads, expanded-node counts are usually the more useful comparison.</p>
         <div className="shortcut-list" aria-label="Keyboard shortcuts">
-          <span><kbd>Space</kbd> run / pause</span>
+          <span><kbd>Space</kbd> play / pause</span>
+          <span><kbd>←</kbd> / <kbd>→</kbd> step back / forward</span>
+          <span><kbd>Cmd/Ctrl+Z</kbd> undo</span>
+          <span><kbd>Cmd/Ctrl+Shift+Z</kbd> redo</span>
           <span><kbd>S</kbd> step</span>
           <span><kbd>R</kbd> reset</span>
           <span><kbd>C</kbd> clear</span>

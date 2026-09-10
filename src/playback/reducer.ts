@@ -83,3 +83,27 @@ export function nextExpansionBoundary(events: readonly SearchEvent[], cursor: nu
   return events.length;
 }
 
+export function previousExpansionBoundary(events: readonly SearchEvent[], cursor: number): number {
+  if (cursor <= 0) return 0;
+  // If cursor is beyond the end, clamp to events.length
+  const currentCursor = Math.min(cursor, events.length);
+
+  // Scan backwards from currentCursor - 1 to find the closed event of the preceding expansion
+  let foundClosedOfCurrent = false;
+
+  for (let index = currentCursor - 1; index >= 0; index -= 1) {
+    // If the cursor was right after a closed event, the first closed event we see going backwards is that current boundary
+    if (!foundClosedOfCurrent && events[index].type === "closed" && index + 1 === currentCursor) {
+      foundClosedOfCurrent = true;
+      continue;
+    }
+
+    // The next closed event we encounter marks the boundary of the previous expansion
+    if (events[index].type === "closed") {
+      return index + 1;
+    }
+  }
+
+  return 0;
+}
+
