@@ -44,12 +44,31 @@ describe("grid dimensions", () => {
     expect(() => createGrid(rows, cols)).toThrow();
   });
 
+  it("returns the exact warning for out-of-range dimensions or >10000 vertices", () => {
+    const expectedError = "(Use 5–300 for row and col and <=10000 row*col )";
+    expect(gridDimensionError(330, 39)).toBe(expectedError);
+    expect(gridDimensionError(50, 225)).toBe(expectedError);
+    expect(gridDimensionError(80, 200)).toBe(expectedError);
+    expect(gridDimensionError(100, 150)).toBe(expectedError);
+    expect(gridDimensionError(200, 100)).toBe(expectedError);
+    expect(gridDimensionError(4, 25)).toBe(expectedError);
+    expect(gridDimensionError(25, 4)).toBe(expectedError);
+    expect(gridDimensionError(301, 25)).toBe(expectedError);
+    expect(gridDimensionError(25, 301)).toBe(expectedError);
+    expect(gridDimensionError(100, 100)).toBeNull();
+    expect(gridDimensionError(50, 200)).toBeNull();
+    expect(gridDimensionError(21, 39)).toBeNull();
+  });
+
   it("provides deterministic size presets", () => {
     expect(GRID_SIZE_PRESETS.map(({ label, rows, cols }) => [label, rows, cols])).toEqual([
       ["Small", 15, 25],
       ["Default", 21, 39],
+      ["Medium", 30, 50],
+      ["Expanded", 40, 70],
       ["Large", 50, 80],
-      ["Stress", 100, 150],
+      ["Huge", 70, 100],
+      ["Stress", 100, 100],
     ]);
   });
 

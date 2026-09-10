@@ -631,14 +631,34 @@ a {
   width: 90px;
   height: 4px;
   border-radius: 2px;
-  background: var(--border-strong);
+  background-color: var(--border-strong);
+  background-image: linear-gradient(
+    var(--timeline-progress-color, var(--accent)),
+    var(--timeline-progress-color, var(--accent))
+  );
+  background-size: var(--timeline-progress, 0%) 100%;
+  background-repeat: no-repeat;
   outline: none;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .timeline-scrubber:hover {
-  background: #596574;
+  background-color: #596574;
+}
+
+.timeline-scrubber.is-complete {
+  --timeline-progress-color: var(--path);
+}
+
+.timeline-scrubber::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.timeline-scrubber::-moz-range-progress {
+  background: transparent;
 }
 
 .timeline-scrubber::-webkit-slider-thumb {
@@ -723,8 +743,30 @@ a {
   color: var(--text);
 }
 
-.random-obstacles-button,
-.random-obstacles-button:hover {
+.maze-btn {
+  height: 30px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface-raised);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.maze-btn:hover {
+  border-color: #596574;
+  background: #1b232d;
+}
+
+.random-obstacles-label,
+.random-obstacles-button:not(.maze-btn),
+.random-obstacles-button:not(.maze-btn):hover {
+  display: inline-block;
   color: var(--pathforge-orange);
   background-image: linear-gradient(
     45deg,
@@ -738,13 +780,43 @@ a {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-size: 11px;
   font-weight: 650;
   text-shadow: 0 0 12px rgba(255, 107, 53, 0.28);
   animation: pathforge-flame-gradient 3s ease-in-out infinite;
 }
 
-.random-obstacles-button:hover {
+.maze-btn:hover .random-obstacles-label,
+.random-obstacles-button:not(.maze-btn):hover {
   text-shadow: 0 0 16px rgba(255, 107, 53, 0.4);
+}
+
+.recursive-division-label,
+.recursive-division-button:not(.maze-btn),
+.recursive-division-button:not(.maze-btn):hover {
+  display: inline-block;
+  color: #ff758c;
+  background-image: linear-gradient(
+    45deg,
+    #f43f5e,
+    #ff6b35,
+    #f472b6,
+    #f43f5e
+  );
+  background-size: 400% 400%;
+  background-position: 0% 50%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 11px;
+  font-weight: 650;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.3);
+  animation: pathforge-flame-gradient 3s ease-in-out infinite;
+}
+
+.maze-btn:hover .recursive-division-label,
+.recursive-division-button:not(.maze-btn):hover {
+  text-shadow: 0 0 16px rgba(244, 63, 94, 0.45);
 }
 
 .text-button.danger:hover {
@@ -843,6 +915,7 @@ a {
   background: #251719;
   color: #ff7b72;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 .speed-control {
@@ -855,7 +928,7 @@ a {
 }
 
 .maze-actions {
-  gap: 12px;
+  gap: 8px;
 }
 
 .toolbar-spacer {
@@ -1695,7 +1768,10 @@ kbd {
   }
 
   .pathforge-wordmark,
-  .random-obstacles-button {
+  .random-obstacles-button,
+  .recursive-division-button,
+  .random-obstacles-label,
+  .recursive-division-label {
     background-position: 45% 50%;
     animation: none;
   }

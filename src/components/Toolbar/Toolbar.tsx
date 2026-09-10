@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import type { AlgorithmId, HeuristicName } from "../../algorithms/types";
 import { HEURISTIC_LABELS, selectableHeuristics } from "../../algorithms/heuristics";
 import { isValidTerrainCost } from "../../core/grid";
@@ -121,11 +121,15 @@ export function Toolbar(props: ToolbarProps) {
               </span>
               <input
                 type="range"
-                className="timeline-scrubber"
+                className={`timeline-scrubber ${props.stepIndex >= props.totalSteps ? "is-complete" : ""}`}
                 min={0}
                 max={props.totalSteps}
                 value={props.stepIndex}
                 onChange={(event) => props.onSeek(Number(event.target.value))}
+                style={{
+                  "--timeline-progress": `${Math.min(100, Math.max(0, (props.stepIndex / props.totalSteps) * 100))}%`,
+                  "--timeline-progress-color": props.stepIndex >= props.totalSteps ? "var(--path)" : "var(--accent)",
+                } as CSSProperties}
                 aria-label="Visualization timeline scrubber"
                 title={`Timeline scrubber (Step ${props.stepIndex} of ${props.totalSteps})`}
               />
@@ -282,12 +286,18 @@ export function Toolbar(props: ToolbarProps) {
         <div className="maze-actions">
           <button
             type="button"
-            className="text-button random-obstacles-button"
+            className="maze-btn random-obstacles-button"
             onClick={props.onRandom}
           >
-            Random obstacles
+            <span className="random-obstacles-label">Random obstacles</span>
           </button>
-          <button type="button" className="text-button" onClick={props.onRecursiveDivision}>Recursive division</button>
+          <button
+            type="button"
+            className="maze-btn recursive-division-button"
+            onClick={props.onRecursiveDivision}
+          >
+            <span className="recursive-division-label">Recursive division</span>
+          </button>
         </div>
 
         <div className="toolbar-spacer" />
