@@ -55,6 +55,15 @@ import {
   type BoardHistorySnapshot,
   type BoardHistoryState,
 } from "./state/boardHistory";
+import { GraphLab } from "./graph/components/GraphLab";
+import { DEFAULT_GRAPH_PRESET } from "./graph/presets";
+import {
+  createGraphHistory,
+  pushGraphAction,
+  type GraphHistoryState,
+} from "./graph/state/graphHistory";
+
+export type LabMode = "grid" | "graph";
 
 export default function App() {
   const [session, setSession] = useState(() =>
@@ -84,6 +93,22 @@ export default function App() {
   const [customTerrainCost, setCustomTerrainCost] = useState(DEFAULT_CUSTOM_TERRAIN_COST);
   const [logoReplayToken, setLogoReplayToken] = useState(0);
   const [statusRevealToken, setStatusRevealToken] = useState(0);
+
+  // PathForge V2 — Lab Mode & Graph State
+  const [labMode, setLabMode] = useState<LabMode>("grid");
+  const [graphDirected, setGraphDirected] = useState(false);
+  const [graphHistory, setGraphHistory] = useState<GraphHistoryState>(() =>
+    createGraphHistory({ ...DEFAULT_GRAPH_PRESET, directed: false }),
+  );
+
+  const toggleGraphDirected = useCallback((nextDirected: boolean) => {
+    setGraphDirected(nextDirected);
+    setGraphHistory((curr) => {
+      if (curr.present.directed === nextDirected) return curr;
+      const nextDoc = { ...curr.present, directed: nextDirected };
+      return pushGraphAction(curr, nextDoc);
+    });
+  }, []);
 
   useEffect(() => {
     if (hasGeneratedInitialGrid.current) return;
@@ -426,6 +451,8 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyboard = (event: KeyboardEvent) => {
+      if (labMode !== "grid") return;
+
       const target = event.target as HTMLElement | null;
       if (
         target &&
@@ -478,7 +505,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyboard);
     return () => window.removeEventListener("keydown", handleKeyboard);
-  }, [activeResult, benchmarkMode, clearBoard, clearSearch, pausePlayback, playPlayback, playback.isComplete, playback.isPlaying, previous, redo, runSelected, step, undo]);
+  }, [activeResult, benchmarkMode, clearBoard, clearSearch, labMode, pausePlayback, playPlayback, playback.isComplete, playback.isPlaying, previous, redo, runSelected, step, undo]);
 
   const selectedNode = selectedCoordinate
     ? playback.snapshot.nodes.get(coordinateKey(selectedCoordinate))
@@ -510,34 +537,78 @@ export default function App() {
           <div>
             <div className="brand-line">
               <h1 className="pathforge-wordmark">PathForge</h1>
-              <span className="version-tag">v1.0</span>
+              <span className="version-tag">v2.0</span>
             </div>
             <p>Interactive graph-search laboratory</p>
           </div>
         </div>
         <div className="topbar-context">
-          <div className="movement-control" aria-label="Movement">
-            <span>Movement</span>
+          <div className="lab-switcher" aria-label="Lab mode">
+            <span>Lab</span>
             <div className="movement-toggle">
-              {(["four-way", "eight-way"] as const).map((mode) => (
+              {(["grid", "graph"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
-                  className={movementMode === mode ? "is-active" : ""}
-                  aria-pressed={movementMode === mode}
-                  onClick={() => changeMovementMode(mode)}
+                  className={labMode === mode ? "is-active" : ""}
+                  aria-pressed={labMode === mode}
+                  onClick={() => setLabMode(mode)}
                 >
-                  {mode === "four-way" ? "4-way" : "8-way"}
+                  {mode === "grid" ? "Grid Lab" : "Graph Lab"}
                 </button>
               ))}
             </div>
           </div>
+
+          {labMode === "grid" ? (
+            <div className="movement-control" aria-label="Movement">
+              <span>Movement</span>
+              <div className="movement-toggle">
+                {(["four-way", "eight-way"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={movementMode === mode ? "is-active" : ""}
+                    aria-pressed={movementMode === mode}
+                    onClick={() => changeMovementMode(mode)}
+                  >
+                    {mode === "four-way" ? "4-way" : "8-way"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="graph-edge-mode-control" aria-label="Graph edges">
+              <span>Edges</span>
+              <div className="movement-toggle">
+                <button
+                  type="button"
+                  className={!graphDirected ? "is-active" : ""}
+                  aria-pressed={!graphDirected}
+                  onClick={() => toggleGraphDirected(false)}
+                >
+                  Undirected
+                </button>
+                <button
+                  type="button"
+                  className={graphDirected ? "is-active" : ""}
+                  aria-pressed={graphDirected}
+                  onClick={() => toggleGraphDirected(true)}
+                >
+                  Directed
+                </button>
+              </div>
+            </div>
+          )}
+
           <span className="topbar-meta">non-negative weights</span>
           <a href="#comparison">comparison</a>
         </div>
       </header>
 
-      <Toolbar
+      {labMode === "grid" ? (
+        <>
+          <Toolbar
         algorithm={algorithm}
         heuristic={heuristic}
         movementMode={movementMode}
@@ -681,6 +752,16 @@ export default function App() {
           onReplay={replay}
         />
       </div>
+        </>
+      ) : (
+        <GraphLab
+          onLogoAnimation={() => setLogoReplayToken((token) => token + 1)}
+          directed={graphDirected}
+          onToggleDirected={toggleGraphDirected}
+          history={graphHistory}
+          onHistoryChange={setGraphHistory}
+        />
+      )}
 
       <footer className="app-footer">
         <p>Execution timing excludes animation and rendering. On small browser workloads, expanded-node counts are usually the more useful comparison.</p>

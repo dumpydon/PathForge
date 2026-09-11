@@ -1,7 +1,15 @@
-import type { SearchResult } from "../../algorithms/types";
+export interface MetricSummaryResult {
+  found: boolean;
+  pathCost: number | null;
+  pathLength: number;
+  discoveredCount: number;
+  expandedCount: number;
+  maxFrontierSize: number;
+  executionTimeMs: number;
+}
 
 interface MetricsPanelProps {
-  result: SearchResult | null;
+  result: MetricSummaryResult | null;
   frontierSize: number;
   visitedCount?: number;
   stepIndex?: number;
