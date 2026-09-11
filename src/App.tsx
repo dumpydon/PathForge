@@ -554,7 +554,11 @@ export default function App() {
                   aria-pressed={labMode === mode}
                   onClick={() => setLabMode(mode)}
                 >
-                  {mode === "grid" ? "Grid Lab" : "Graph Lab"}
+                  {mode === "grid" ? (
+                    <span className="grid-lab-label">Grid Lab</span>
+                  ) : (
+                    <span className="graph-lab-label">Graph Lab</span>
+                  )}
                 </button>
               ))}
             </div>

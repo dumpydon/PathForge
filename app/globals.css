@@ -814,6 +814,7 @@ a {
 }
 
 .random-obstacles-label,
+.grid-lab-label,
 .random-obstacles-button:not(.maze-btn),
 .random-obstacles-button:not(.maze-btn):hover {
   display: inline-block;
@@ -837,11 +838,13 @@ a {
 }
 
 .maze-btn:hover .random-obstacles-label,
+.movement-toggle button:hover .grid-lab-label,
 .random-obstacles-button:not(.maze-btn):hover {
   text-shadow: 0 0 16px rgba(255, 107, 53, 0.4);
 }
 
 .recursive-division-label,
+.graph-lab-label,
 .recursive-division-button:not(.maze-btn),
 .recursive-division-button:not(.maze-btn):hover {
   display: inline-block;
@@ -865,6 +868,7 @@ a {
 }
 
 .maze-btn:hover .recursive-division-label,
+.movement-toggle button:hover .graph-lab-label,
 .recursive-division-button:not(.maze-btn):hover {
   text-shadow: 0 0 16px rgba(244, 63, 94, 0.45);
 }
@@ -2111,7 +2115,9 @@ kbd {
   .random-obstacles-button,
   .recursive-division-button,
   .random-obstacles-label,
-  .recursive-division-label {
+  .recursive-division-label,
+  .grid-lab-label,
+  .graph-lab-label {
     background-position: 45% 50%;
     animation: none;
   }
