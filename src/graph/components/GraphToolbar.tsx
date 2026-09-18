@@ -5,6 +5,7 @@ import { ALGORITHM_INFO } from "../../data/algorithmInfo";
 import type { GraphAlgorithmId } from "../algorithms/types";
 import { GRAPH_PRESETS, type GraphPresetId } from "../presets";
 import type { GraphEditorTool } from "./GraphCanvas";
+import { useCompletionCue } from "../../hooks/useCompletionCue";
 
 const GRAPH_ALGORITHM_ORDER: GraphAlgorithmId[] = ["dfs", "bfs", "dijkstra"];
 
@@ -46,6 +47,7 @@ const TOOL_DEFINITIONS: Array<{ id: GraphEditorTool; label: string; icon: string
 ];
 
 export function GraphToolbar(props: GraphToolbarProps) {
+  const completionCue = useCompletionCue(props.isComplete);
   const [playClickToken, setPlayClickToken] = useState(0);
 
   const selectedPreset = GRAPH_PRESETS.find(
@@ -145,8 +147,10 @@ export function GraphToolbar(props: GraphToolbarProps) {
 
           <button
             type="button"
-            className="button playback-action-btn"
+            className={`button playback-action-btn ${completionCue ? "completion-glare" : ""}`}
             onClick={props.onReset}
+            disabled={!props.hasResult}
+            title="Reset search (R)"
           >
             <svg
               className="playback-btn-icon"
@@ -165,7 +169,7 @@ export function GraphToolbar(props: GraphToolbarProps) {
           </button>
           <button
             type="button"
-            className="button playback-action-btn"
+            className={`button playback-action-btn ${completionCue ? "completion-glare" : ""}`}
             onClick={props.onClearGraph}
             title="Clear graph (C)"
           >

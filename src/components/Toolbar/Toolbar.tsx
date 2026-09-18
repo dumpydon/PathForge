@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import type { AlgorithmId, HeuristicName } from "../../algorithms/types";
 import { HEURISTIC_LABELS, selectableHeuristics } from "../../algorithms/heuristics";
 import { isValidTerrainCost } from "../../core/grid";
@@ -13,6 +13,7 @@ import { ALGORITHM_INFO, ALGORITHM_ORDER } from "../../data/algorithmInfo";
 import { PRESETS, type PresetId } from "../../mazes/presets";
 import type { PaintTool } from "../Grid/GridBoard";
 import { GridSizeControls } from "./GridSizeControls";
+import { useCompletionCue } from "../../hooks/useCompletionCue";
 
 interface ToolbarProps {
   algorithm: AlgorithmId;
@@ -55,22 +56,41 @@ interface ToolbarProps {
   scenarioLabel?: string;
 }
 
-const BASE_TOOLS: Array<{ id: PaintTool; label: string; swatch: string }> = [
+const BASE_TOOLS: Array<{ id: PaintTool; label: string; swatch: ReactNode }> = [
   { id: "wall", label: "Wall", swatch: "■" },
   { id: "mud", label: "Mud · 3", swatch: "▧" },
   { id: "water", label: "Water · 5", swatch: "▨" },
 ];
 
 export function Toolbar(props: ToolbarProps) {
+  const completionCue = useCompletionCue(props.isComplete);
   const [playClickToken, setPlayClickToken] = useState(0);
   const [customCostDraft, setCustomCostDraft] = useState(String(props.customTerrainCost));
   const customCostIsValid = /^\d+$/.test(customCostDraft) &&
     isValidTerrainCost(Number(customCostDraft));
 
-  const tools: Array<{ id: PaintTool; label: string; swatch: string }> = [
+  const tools: Array<{ id: PaintTool; label: string; swatch: ReactNode }> = [
     ...BASE_TOOLS,
     { id: "custom", label: `Custom · ${props.customTerrainCost}`, swatch: "◆" },
-    { id: "erase", label: "Erase", swatch: "□" },
+    {
+      id: "erase",
+      label: "Erase",
+      swatch: (
+        <svg
+          className="tool-swatch-icon"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M 4.5 13.5 L 2.2 11.2 a 1.2 1.2 0 0 1 0 -1.7 L 8.3 3.1 a 1.2 1.2 0 0 1 1.7 0 l 3.8 3.8 a 1.2 1.2 0 0 1 0 1.7 L 7.5 14.5 H 4.5 Z" />
+          <line x1="5.7" y1="8.7" x2="9.5" y2="12.5" />
+        </svg>
+      ),
+    },
   ];
 
   const updateCustomCost = (draft: string): void => {
@@ -188,8 +208,9 @@ export function Toolbar(props: ToolbarProps) {
 
           <button
             type="button"
-            className="button playback-action-btn"
+            className={`button playback-action-btn ${completionCue ? "completion-glare" : ""}`}
             onClick={props.onReset}
+            disabled={!props.playbackEnabled || !props.hasResult}
           >
             <svg
               className="playback-btn-icon"
@@ -208,7 +229,7 @@ export function Toolbar(props: ToolbarProps) {
           </button>
           <button
             type="button"
-            className="button playback-action-btn"
+            className={`button playback-action-btn ${completionCue ? "completion-glare" : ""}`}
             onClick={props.onClear}
           >
             <svg
@@ -255,7 +276,10 @@ export function Toolbar(props: ToolbarProps) {
                 disabled={!props.editingEnabled}
                 onClick={() => props.onPaintToolChange(tool.id)}
               >
-                <span aria-hidden="true">{tool.swatch}</span>{tool.label}
+                <span className={`tool-swatch tool-swatch-${tool.id}`} aria-hidden="true">
+                  {tool.swatch}
+                </span>
+                {tool.label}
               </button>
             ))}
           </div>

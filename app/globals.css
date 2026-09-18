@@ -438,6 +438,8 @@ a {
 }
 
 .tool-buttons button {
+  display: inline-flex;
+  align-items: center;
   padding: 0 10px;
   white-space: nowrap;
 }
@@ -446,6 +448,40 @@ a {
   margin-right: 6px;
   color: var(--accent-strong);
   font-family: var(--font-mono);
+}
+
+.tool-buttons button .tool-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.tool-buttons button .tool-swatch-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.tool-buttons button .tool-swatch-wall {
+  color: #8b949e;
+}
+
+.tool-buttons button .tool-swatch-mud {
+  color: #d29922;
+}
+
+.tool-buttons button .tool-swatch-water {
+  color: #388bfd;
+}
+
+.tool-buttons button .tool-swatch-custom {
+  color: #c084fc;
+}
+
+.tool-buttons button .tool-swatch-erase {
+  color: #fa7970;
 }
 
 .history-buttons {
@@ -546,6 +582,69 @@ a {
   height: 32px;
   min-height: 32px;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Completion glare cue */
+.playback-action-btn.completion-glare {
+  animation: completion-border-glow 2.1s cubic-bezier(0.22, 1, 0.36, 1) 0s both;
+}
+
+.playback-actions .playback-action-btn:nth-child(2).completion-glare {
+  animation-delay: 0.12s;
+}
+
+.playback-action-btn.completion-glare::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  bottom: -50%;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.04) 75%,
+    transparent 100%
+  );
+  transform: translateX(-160%) skewX(-15deg);
+  pointer-events: none;
+  animation: completion-glare-sweep 2.1s cubic-bezier(0.22, 1, 0.36, 1) 0s both;
+}
+
+.playback-actions .playback-action-btn:nth-child(2).completion-glare::after {
+  animation-delay: 0.12s;
+}
+
+@keyframes completion-glare-sweep {
+  0% {
+    transform: translateX(-160%) skewX(-15deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(340%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes completion-border-glow {
+  0%, 100% {
+    border-color: var(--border-strong);
+    box-shadow: none;
+  }
+  40%, 60% {
+    border-color: rgba(200, 225, 255, 0.35);
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.12);
+  }
 }
 
 .playback-btn-icon {
@@ -2120,6 +2219,15 @@ kbd {
   .graph-lab-label {
     background-position: 45% 50%;
     animation: none;
+  }
+
+  .playback-action-btn.completion-glare,
+  .playback-action-btn.completion-glare::after {
+    animation: none !important;
+  }
+
+  .playback-action-btn.completion-glare::after {
+    display: none !important;
   }
 
   .pathforge-logo__route,
