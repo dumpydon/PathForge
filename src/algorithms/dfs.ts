@@ -15,6 +15,7 @@ export function dfs(grid: Grid, options: SearchOptions = {}): SearchResult {
   const stack = [startIndex];
   const discovered = new Set<number>([startIndex]);
   const parents = new Map<number, number>();
+  const depths = new Map<number, number>([[startIndex, 0]]);
   const events: SearchEvent[] = [];
   let discoveredCount = 1;
   let expandedCount = 0;
@@ -25,12 +26,13 @@ export function dfs(grid: Grid, options: SearchOptions = {}): SearchResult {
     type: "discovered",
     coordinate: grid.start,
     frontierSize: 1,
-    values: { parent: null, discoveryOrder: 1 },
+    values: { parent: null, level: 0, discoveryOrder: 1 },
   });
 
   while (stack.length > 0) {
     const current = stack.pop()!;
     const coordinate = fromIndex(grid, current);
+    const depth = depths.get(current) ?? 0;
     expandedCount += 1;
 
     if (recordEvents) events.push({
@@ -39,6 +41,7 @@ export function dfs(grid: Grid, options: SearchOptions = {}): SearchResult {
       frontierSize: stack.length,
       values: {
         parent: parents.has(current) ? fromIndex(grid, parents.get(current)!) : null,
+        level: depth,
         expansionOrder: expandedCount,
       },
     });
@@ -57,6 +60,7 @@ export function dfs(grid: Grid, options: SearchOptions = {}): SearchResult {
 
       discovered.add(neighbor.index);
       parents.set(neighbor.index, current);
+      depths.set(neighbor.index, depth + 1);
       stack.push(neighbor.index);
       discoveredCount += 1;
       maxFrontierSize = Math.max(maxFrontierSize, stack.length);
@@ -65,7 +69,11 @@ export function dfs(grid: Grid, options: SearchOptions = {}): SearchResult {
         type: "discovered",
         coordinate: neighbor.coordinate,
         frontierSize: stack.length,
-        values: { parent: coordinate, discoveryOrder: discoveredCount },
+        values: {
+          parent: coordinate,
+          level: depth + 1,
+          discoveryOrder: discoveredCount,
+        },
       });
     }
 

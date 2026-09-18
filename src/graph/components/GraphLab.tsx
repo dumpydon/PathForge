@@ -110,6 +110,11 @@ export function GraphLab({
     setInlineErrorMessage(null);
   }, [resetPlayback]);
 
+  const resumePlayback = useCallback(() => {
+    onLogoAnimation?.();
+    playPlayback();
+  }, [onLogoAnimation, playPlayback]);
+
   // When directed changes externally, reset search
   const prevDirectedRef = useRef(doc.directed);
   useEffect(() => {
@@ -216,12 +221,13 @@ export function GraphLab({
     (alg: GraphAlgorithmId) => {
       const result = comparisonResults[alg];
       if (!result) return;
+      onLogoAnimation?.();
       setAlgorithm(alg);
       setStatusRevealToken((t) => t + 1);
       setActiveResult(result);
       loadPlayback(result, true);
     },
-    [comparisonResults, loadPlayback],
+    [comparisonResults, loadPlayback, onLogoAnimation],
   );
 
   // History operations
@@ -429,7 +435,7 @@ export function GraphLab({
         if (playback.isPlaying) pausePlayback();
         else if (playback.isComplete) {
           // Completed final state: do not restart
-        } else if (activeResult) playPlayback();
+        } else if (activeResult) resumePlayback();
         else runSelected();
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
@@ -466,11 +472,11 @@ export function GraphLab({
     handleDeleteEdge,
     handleDeleteNode,
     pausePlayback,
-    playPlayback,
     playback.isComplete,
     playback.isPlaying,
     previousStep,
     redo,
+    resumePlayback,
     runSelected,
     selectedEdgeId,
     selectedNodeId,
@@ -504,7 +510,7 @@ export function GraphLab({
         onToolChange={setActiveTool}
         onRun={runSelected}
         onPause={pausePlayback}
-        onResume={playPlayback}
+        onResume={resumePlayback}
         onStep={step}
         onPrevious={previousStep}
         onSeek={seekStep}

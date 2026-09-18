@@ -31,4 +31,15 @@ describe("DFS", () => {
     expect(result.found).toBe(false);
     expect(result.expandedCount).toBe(2);
   });
+
+  it("emits branch depth level in discovered and expanded events", () => {
+    const grid = gridFromRows(["S...", "....", "...T"]);
+    const result = dfs(grid);
+    const discoveredEvents = result.events.filter((e) => e.type === "discovered" && e.values);
+    expect(discoveredEvents.length).toBeGreaterThan(0);
+    expect(discoveredEvents.every((e) => "values" in e && typeof e.values?.level === "number")).toBe(true);
+
+    const startEvent = discoveredEvents[0];
+    expect("values" in startEvent && startEvent.values?.level).toBe(0);
+  });
 });

@@ -2,9 +2,11 @@
 
 import { useEffect, useState, type CSSProperties, type PointerEvent } from "react";
 import { isCustomTerrain, terrainAt, terrainKind } from "../../core/grid";
+import type { AlgorithmId } from "../../algorithms/types";
 import { coordinateKey, coordinatesEqual, type Coordinate, type Grid } from "../../core/types";
 import type { PlaybackSnapshot } from "../../playback/types";
 import { GridLegend } from "./GridLegend";
+import { getSearchStateColor, type SearchVisualBounds } from "./searchEnergy";
 import { customTerrainColor } from "./terrainPresentation";
 
 export type PaintTool = "wall" | "mud" | "water" | "custom" | "erase";
@@ -14,6 +16,8 @@ interface GridBoardProps {
   snapshot: PlaybackSnapshot;
   customTerrainCost: number;
   selectedCoordinate: Coordinate | null;
+  algorithm?: AlgorithmId;
+  searchBounds?: SearchVisualBounds | null;
   onInspect: (coordinate: Coordinate) => void;
   onPaint: (coordinate: Coordinate) => void;
   onMoveEndpoint: (endpoint: "start" | "target", coordinate: Coordinate) => void;
@@ -28,6 +32,8 @@ export function GridBoard({
   snapshot,
   customTerrainCost,
   selectedCoordinate,
+  algorithm,
+  searchBounds,
   onInspect,
   onPaint,
   onMoveEndpoint,
@@ -35,6 +41,14 @@ export function GridBoard({
   onInteractionEnd,
 }: GridBoardProps) {
   const [dragMode, setDragMode] = useState<DragMode>(null);
+
+  const activeBounds: SearchVisualBounds = searchBounds ?? {
+    algorithm: algorithm ?? "bfs",
+    maxLevel: 1,
+    maxCost: 1,
+    maxDepth: 1,
+    maxF: 1,
+  };
 
   useEffect(() => {
     const stopDragging = () => {
@@ -101,6 +115,19 @@ export function GridBoard({
             : false;
           const endpointLabel = isStart && isTarget ? "ST" : isStart ? "S" : isTarget ? "T" : "";
           const stateLabel = playbackNode?.state ? `, ${playbackNode.state}` : "";
+          const isFrontier = playbackNode?.state === "frontier";
+          let cellStyle: CSSProperties | undefined = undefined;
+
+          if (isFrontier) {
+            const energy = getSearchStateColor(algorithm ?? "bfs", playbackNode, activeBounds);
+            cellStyle = {
+              "--cell-frontier-bg": energy.background,
+              "--cell-frontier-border": energy.border,
+              "--cell-frontier-glow": energy.glow,
+            } as CSSProperties;
+          } else if (isCustomTerrain(terrain) && !playbackNode) {
+            cellStyle = { backgroundColor: customTerrainColor(terrain.cost) };
+          }
 
           return (
             <button
@@ -117,9 +144,7 @@ export function GridBoard({
                 .filter(Boolean)
                 .join(" ")}
               role="gridcell"
-              style={isCustomTerrain(terrain)
-                ? { backgroundColor: customTerrainColor(terrain.cost) }
-                : undefined}
+              style={cellStyle}
               aria-label={`Row ${coordinate.row + 1}, column ${coordinate.col + 1}, ${
                 isCustomTerrain(terrain) ? `custom terrain, cost ${terrain.cost}` : terrain
               }${stateLabel}${

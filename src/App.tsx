@@ -10,6 +10,7 @@ import {
 import { PathForgeLogo } from "./components/Brand/PathForgeLogo";
 import { BenchmarkGrid } from "./components/Grid/BenchmarkGrid";
 import { GridBoard, type PaintTool } from "./components/Grid/GridBoard";
+import { computeSearchVisualBounds } from "./components/Grid/searchEnergy";
 import { AlgorithmPanel } from "./components/Panels/AlgorithmPanel";
 import { ComparisonPanel } from "./components/Panels/ComparisonPanel";
 import { MetricsPanel } from "./components/Panels/MetricsPanel";
@@ -130,6 +131,7 @@ export default function App() {
 
   const { grid, activeResult, comparisonResults, selectedCoordinate, scenarioLabel } = session;
   const benchmarkMode = isBenchmarkGrid(grid);
+  const searchBounds = useMemo(() => computeSearchVisualBounds(activeResult), [activeResult]);
   const playback = usePlayback(activeResult);
   const {
     load: loadPlayback,
@@ -144,6 +146,11 @@ export default function App() {
     resetPlayback();
     setSession((current) => ({ ...current, activeResult: null }));
   }, [resetPlayback]);
+
+  const resumePlayback = useCallback(() => {
+    setLogoReplayToken((token) => token + 1);
+    playPlayback();
+  }, [playPlayback]);
 
   const replaceGrid = useCallback(
     (nextGrid: Grid, label: string) => {
@@ -232,6 +239,7 @@ export default function App() {
     (id: AlgorithmId) => {
       const result = comparisonResults[id];
       if (!result) return;
+      setLogoReplayToken((token) => token + 1);
       setAlgorithm(id);
       activateResult(result, true);
     },
@@ -486,7 +494,7 @@ export default function App() {
         else if (playback.isPlaying) pausePlayback();
         else if (playback.isComplete) {
           // Completed final state: do not restart
-        } else if (activeResult) playPlayback();
+        } else if (activeResult) resumePlayback();
         else runSelected();
       } else if (event.key === "ArrowLeft") {
         event.preventDefault();
@@ -505,7 +513,7 @@ export default function App() {
 
     window.addEventListener("keydown", handleKeyboard);
     return () => window.removeEventListener("keydown", handleKeyboard);
-  }, [activeResult, benchmarkMode, clearBoard, clearSearch, labMode, pausePlayback, playPlayback, playback.isComplete, playback.isPlaying, previous, redo, runSelected, step, undo]);
+  }, [activeResult, benchmarkMode, clearBoard, clearSearch, labMode, pausePlayback, playback.isComplete, playback.isPlaying, previous, redo, resumePlayback, runSelected, step, undo]);
 
   const selectedNode = selectedCoordinate
     ? playback.snapshot.nodes.get(coordinateKey(selectedCoordinate))
@@ -638,7 +646,7 @@ export default function App() {
         onCustomTerrainCostChange={setCustomTerrainCost}
         onRun={runSelected}
         onPause={pausePlayback}
-        onResume={playPlayback}
+        onResume={resumePlayback}
         onStep={step}
         onPrevious={previous}
         onSeek={seek}
@@ -702,6 +710,8 @@ export default function App() {
                 snapshot={playback.snapshot}
                 customTerrainCost={customTerrainCost}
                 selectedCoordinate={selectedCoordinate}
+                algorithm={algorithm}
+                searchBounds={searchBounds}
                 onInspect={inspectCoordinate}
                 onPaint={paint}
                 onMoveEndpoint={moveGridEndpoint}
