@@ -545,7 +545,7 @@ export default function App() {
           <div>
             <div className="brand-line">
               <h1 className="pathforge-wordmark">PathForge</h1>
-              <span className="version-tag">v2.0</span>
+              <span className="version-tag">v2.5</span>
             </div>
             <p>Interactive graph-search laboratory</p>
           </div>
