@@ -712,6 +712,10 @@ export default function App() {
                 selectedCoordinate={selectedCoordinate}
                 algorithm={algorithm}
                 searchBounds={searchBounds}
+                hasResult={Boolean(activeResult)}
+                isComplete={playback.isComplete}
+                cursor={playback.cursor}
+                activeResult={activeResult}
                 onInspect={inspectCoordinate}
                 onPaint={paint}
                 onMoveEndpoint={moveGridEndpoint}

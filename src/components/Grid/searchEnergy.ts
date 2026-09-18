@@ -72,6 +72,152 @@ function rgbToHex(r: number, g: number, b: number): string {
 }
 
 /**
+ * Shared continuous linear-gradient string derived directly from PALETTE_STOPS.
+ * Used for the Search Energy legend scale and swatch representation.
+ */
+export const SEARCH_ENERGY_GRADIENT = `linear-gradient(90deg, ${PALETTE_STOPS.map(
+  (s) => `${rgbToHex(s.r, s.g, s.b)} ${Math.round(s.t * 100)}%`,
+).join(", ")})`;
+
+export interface SearchEnergyScaleConfig {
+  label: string;
+  minLabel: string;
+  maxLabel: string;
+  tooltip: string;
+  hasActiveBounds: boolean;
+}
+
+/**
+ * Returns algorithm-specific configuration for the Search Energy legend scale.
+ * Dynamically adapts the metric name, bounds, and educational tooltip.
+ */
+export function getSearchEnergyScaleConfig(
+  algorithm: AlgorithmId,
+  bounds: SearchVisualBounds | null | undefined,
+  hasResult: boolean,
+): SearchEnergyScaleConfig {
+  switch (algorithm) {
+    case "bfs":
+      return {
+        label: "BFS level",
+        minLabel: "0",
+        maxLabel: hasResult && bounds ? `${bounds.maxLevel}` : "—",
+        tooltip: "Frontier color represents BFS level (unweighted distance) from Start.",
+        hasActiveBounds: hasResult,
+      };
+    case "dfs":
+      return {
+        label: "Search depth",
+        minLabel: "0",
+        maxLabel: hasResult && bounds ? `${bounds.maxDepth}` : "—",
+        tooltip: "Frontier color represents search-tree branch depth from Start.",
+        hasActiveBounds: hasResult,
+      };
+    case "dijkstra":
+      return {
+        label: "Path cost",
+        minLabel: "0",
+        maxLabel: hasResult && bounds ? `${bounds.maxCost}` : "—",
+        tooltip: "Frontier color represents accumulated path cost g(n).",
+        hasActiveBounds: hasResult,
+      };
+    case "astar":
+      return {
+        label: "Goal progress",
+        minLabel: "0%",
+        maxLabel: "100%",
+        tooltip: "Frontier color represents estimated goal progress ratio g/(g+h).",
+        hasActiveBounds: hasResult,
+      };
+  }
+}
+
+export interface LiveSearchTelemetry {
+  /** Raw metric value of the current processing node, or null if idle */
+  currentMetricValue: number | null;
+  /** Human-readable display string for readout, e.g. "39" or "74%" */
+  displayValue: string;
+  /** Normalized position in [0, 1] for marker positioning, or null if idle */
+  normalizedProgress: number | null;
+  /** Dynamically matched Search State Color at this current position */
+  color: SearchStateColor | null;
+}
+
+/**
+ * Extracts the live, playback-synchronized Search Energy telemetry at the given cursor.
+ * Tracks the node currently being popped/processed/expanded.
+ * Stable across discovery, relaxation, closing, and path-reconstruction events.
+ */
+export function getCurrentSearchTelemetry(
+  algorithm: AlgorithmId,
+  result: SearchResult | null | undefined,
+  cursor: number,
+  bounds: SearchVisualBounds | null | undefined,
+): LiveSearchTelemetry {
+  if (!result || !result.events || result.events.length === 0 || cursor <= 0) {
+    return {
+      currentMetricValue: null,
+      displayValue: "—",
+      normalizedProgress: null,
+      color: null,
+    };
+  }
+
+  const safeBounds = bounds ?? computeSearchVisualBounds(result);
+  const clampedCursor = Math.min(cursor, result.events.length);
+  let currentValues: NodeSearchValues | null = null;
+
+  // Scan backwards from cursor - 1 to find the most recent node being expanded/processed.
+  for (let i = clampedCursor - 1; i >= 0; i--) {
+    const event = result.events[i];
+    if (event.type === "expanded" && event.values) {
+      currentValues = event.values;
+      break;
+    }
+  }
+
+  // If cursor is at the very beginning before the first expanded event (e.g. cursor=1 discovered event)
+  if (!currentValues) {
+    const first = result.events[0];
+    if ("values" in first && first.values) {
+      currentValues = first.values;
+    }
+  }
+
+  if (!currentValues) {
+    return {
+      currentMetricValue: null,
+      displayValue: "—",
+      normalizedProgress: null,
+      color: null,
+    };
+  }
+
+  const metric = getSearchVisualMetric(algorithm, currentValues);
+  const normalizedProgress = normalizeSearchMetric(
+    algorithm,
+    metric.value,
+    safeBounds,
+    currentValues,
+  );
+  const color = getSearchStateColor(algorithm, currentValues, safeBounds);
+
+  let displayValue: string;
+  if (algorithm === "astar") {
+    displayValue = `${Math.round(metric.value * 100)}%`;
+  } else {
+    displayValue = `${metric.value}`;
+  }
+
+  return {
+    currentMetricValue: metric.value,
+    displayValue,
+    normalizedProgress,
+    color,
+  };
+}
+
+/**
  * Computes run-level bounds from a completed SearchResult.
  * Guaranteed immutable throughout playback and scrubbing.
  */

@@ -1330,6 +1330,21 @@ a {
   }
 }
 
+/* Completed search: soften residual frontier so final path is unmistakably the visual hero */
+.grid-board.is-complete .grid-cell.search-frontier {
+  opacity: 0.52;
+  filter: saturate(0.65);
+  box-shadow: inset 0 0 0 1px var(--cell-frontier-border, #3f83b4);
+  transition: opacity 220ms ease, filter 220ms ease;
+}
+
+.grid-board.is-complete .grid-cell.search-frontier:hover {
+  opacity: 0.92;
+  filter: saturate(0.9);
+  box-shadow: inset 0 0 0 1.5px #f0f6fc;
+  z-index: 2;
+}
+
 .grid-cell.search-closed {
   background-color: var(--closed);
   background-image: none;
@@ -1587,14 +1602,25 @@ a {
 }
 
 .grid-legend {
+  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 10px 16px;
   padding: 12px 2px 0;
   color: var(--text-muted);
   font-size: 10px;
 }
 
+.legend-swatches {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.legend-swatches > span,
 .grid-legend > span {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
 
@@ -1613,7 +1639,10 @@ a {
 
 .swatch-start { background: #1f883d; }
 .swatch-target { background: #cf222e; }
-.swatch-frontier { background: var(--frontier); }
+.swatch-frontier {
+  background: linear-gradient(135deg, #22d3ee 0%, #f97316 100%);
+  border-color: rgba(34, 211, 238, 0.4);
+}
 .swatch-closed { background: var(--closed); }
 .swatch-path { background: var(--path); }
 .swatch-mud { background: var(--mud); }
@@ -1627,6 +1656,130 @@ a {
   );
 }
 .swatch-wall { background: var(--wall); }
+
+/* Search Energy live telemetry scale in legend */
+.search-energy-scale {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px 5px;
+  background: rgba(21, 27, 35, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 10px;
+  user-select: none;
+  cursor: help;
+  transition: opacity 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.search-energy-scale.is-idle {
+  opacity: 0.62;
+}
+
+.search-energy-scale.is-active {
+  opacity: 1;
+  border-color: var(--border-strong);
+}
+
+.search-energy-scale.is-telemetry-active {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.search-energy-scale .scale-label {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.search-energy-scale .scale-bound {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-subtle);
+  min-width: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.search-energy-scale.is-active .scale-bound {
+  color: var(--text);
+}
+
+.search-energy-scale .scale-track-container {
+  position: relative;
+  width: 136px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  margin: 0 2px;
+}
+
+.search-energy-scale .scale-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  display: flex;
+  position: absolute;
+  top: 7px;
+  left: 0;
+}
+
+.search-energy-scale .scale-gradient {
+  width: 100%;
+  height: 100%;
+}
+
+.search-energy-scale .scale-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+  transition: left 120ms cubic-bezier(0.2, 0, 0, 1);
+  z-index: 2;
+}
+
+.search-energy-scale .scale-marker-notch {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  background: var(--marker-color, #22d3ee);
+  border: 1px solid #ffffff;
+  border-radius: 1px;
+  box-shadow: 0 0 6px var(--marker-glow, rgba(34, 211, 238, 0.6)), 0 1px 2px rgba(0, 0, 0, 0.7);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.search-energy-scale .scale-marker-stem {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 1.5px;
+  height: 8px;
+  background: #ffffff;
+  box-shadow: 0 0 4px var(--marker-glow, rgba(34, 211, 238, 0.6));
+  transform: translateX(-50%);
+}
+
+.search-energy-scale .scale-marker-value {
+  position: absolute;
+  top: 15px;
+  left: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--marker-color, #22d3ee);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 6px var(--marker-glow, rgba(34, 211, 238, 0.5));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .workspace-note {
   min-height: 36px;
@@ -2289,6 +2442,14 @@ kbd {
 
   .grid-cell.search-frontier {
     animation: none !important;
+  }
+
+  .grid-board.is-complete .grid-cell.search-frontier {
+    transition: none;
+  }
+
+  .search-energy-scale .scale-marker {
+    transition: none !important;
   }
 
   .pathforge-wordmark,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties, type PointerEvent } from "react";
 import { isCustomTerrain, terrainAt, terrainKind } from "../../core/grid";
-import type { AlgorithmId } from "../../algorithms/types";
+import type { AlgorithmId, SearchResult } from "../../algorithms/types";
 import { coordinateKey, coordinatesEqual, type Coordinate, type Grid } from "../../core/types";
 import type { PlaybackSnapshot } from "../../playback/types";
 import { GridLegend } from "./GridLegend";
@@ -18,6 +18,10 @@ interface GridBoardProps {
   selectedCoordinate: Coordinate | null;
   algorithm?: AlgorithmId;
   searchBounds?: SearchVisualBounds | null;
+  hasResult?: boolean;
+  isComplete?: boolean;
+  cursor?: number;
+  activeResult?: SearchResult | null;
   onInspect: (coordinate: Coordinate) => void;
   onPaint: (coordinate: Coordinate) => void;
   onMoveEndpoint: (endpoint: "start" | "target", coordinate: Coordinate) => void;
@@ -34,6 +38,10 @@ export function GridBoard({
   selectedCoordinate,
   algorithm,
   searchBounds,
+  hasResult = false,
+  isComplete = false,
+  cursor = 0,
+  activeResult = null,
   onInspect,
   onPaint,
   onMoveEndpoint,
@@ -95,6 +103,7 @@ export function GridBoard({
         className={[
           "grid-board",
           dragMode === "start" || dragMode === "target" ? "is-dragging-endpoint" : "",
+          isComplete ? "is-complete" : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -159,7 +168,14 @@ export function GridBoard({
           );
         })}
       </div>
-      <GridLegend customTerrainCost={customTerrainCost} />
+      <GridLegend
+        customTerrainCost={customTerrainCost}
+        algorithm={algorithm}
+        searchBounds={searchBounds}
+        hasResult={hasResult}
+        cursor={cursor}
+        activeResult={activeResult}
+      />
     </div>
   );
 }
