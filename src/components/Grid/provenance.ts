@@ -65,12 +65,13 @@ export function formatProvenanceMetric(
       const progress = g + h > 0 ? g / (g + h) : 1;
       const pct = Math.round(progress * 100);
       const gDisplay = Number.isInteger(g) ? `${g}` : g.toFixed(1);
+      const hDisplay = Number.isInteger(h) ? `${h}` : h.toFixed(1);
       const fDisplay = Number.isInteger(f) ? `${f}` : f.toFixed(1);
       return {
         name: "A* goal progress",
         value: progress,
-        badgeLabel: `g: ${gDisplay} · f: ${fDisplay} (${pct}%)`,
-        details: `Cost: ${gDisplay}, Heuristic: ${h.toFixed(1)}, Total: ${fDisplay}`,
+        badgeLabel: `(${pct}%) {f:${fDisplay}, g:${gDisplay}, h:${hDisplay}}`,
+        details: `Cost: ${gDisplay}, Heuristic: ${hDisplay}, Total: ${fDisplay}`,
       };
     }
   }

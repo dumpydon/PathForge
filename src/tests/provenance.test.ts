@@ -182,8 +182,9 @@ describe("Frontier Provenance & Hover Trace System", () => {
         const trace = extractProvenanceTrace(frontierCoord, snapshot, grid, "astar", bounds);
         expect(trace).not.toBeNull();
         expect(trace!.metric.name).toBe("A* goal progress");
-        expect(trace!.metric.badgeLabel).toContain("g:");
         expect(trace!.metric.badgeLabel).toContain("f:");
+        expect(trace!.metric.badgeLabel).toContain("g:");
+        expect(trace!.metric.badgeLabel).toContain("h:");
         expect(trace!.metric.badgeLabel).toContain("%");
       }
     });
@@ -483,7 +484,7 @@ describe("Frontier Provenance & Hover Trace System", () => {
             metric: {
               name: "A* goal progress",
               value: 0.72,
-              badgeLabel: "g: 18 · f: 25 (72%)",
+              badgeLabel: "(72%) {f:25, g:18, h:7}",
               details: "",
             },
             color: dummyColor,
@@ -495,7 +496,7 @@ describe("Frontier Provenance & Hover Trace System", () => {
         }),
       );
       expect(astarHtml).toContain("A* goal progress:");
-      expect(astarHtml).toContain("g: 18 · f: 25 (72%)");
+      expect(astarHtml).toContain("(72%) {f:25, g:18, h:7}");
     });
 
     it("renders nothing when trace is null or board has zero dimensions", () => {
