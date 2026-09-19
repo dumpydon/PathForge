@@ -87,7 +87,7 @@ describe("Frontier Provenance & Hover Trace System", () => {
       expect(frontierCoord).not.toBeNull();
       const trace = extractProvenanceTrace(frontierCoord, snapshot, grid, "dfs", bounds);
       expect(trace).not.toBeNull();
-      expect(trace!.metric.name).toBe("Search depth");
+      expect(trace!.metric.name).toBe("DFS search depth");
       expect(trace!.chain[0]).toEqual(grid.start);
       expect(trace!.chain[trace!.chain.length - 1]).toEqual(frontierCoord!);
     });
@@ -152,8 +152,8 @@ describe("Frontier Provenance & Hover Trace System", () => {
         parent: { row: 0, col: 0 },
         g: 22,
       });
-      expect(info.name).toBe("Path cost");
-      expect(info.badgeLabel).toBe("Cost 22");
+      expect(info.name).toBe("Dijkstra path cost");
+      expect(info.badgeLabel).toBe("22");
     });
   });
 
@@ -181,7 +181,7 @@ describe("Frontier Provenance & Hover Trace System", () => {
       if (frontierCoord) {
         const trace = extractProvenanceTrace(frontierCoord, snapshot, grid, "astar", bounds);
         expect(trace).not.toBeNull();
-        expect(trace!.metric.name).toBe("Goal progress");
+        expect(trace!.metric.name).toBe("A* goal progress");
         expect(trace!.metric.badgeLabel).toContain("g:");
         expect(trace!.metric.badgeLabel).toContain("f:");
         expect(trace!.metric.badgeLabel).toContain("%");
@@ -372,9 +372,130 @@ describe("Frontier Provenance & Hover Trace System", () => {
       expect(html).toContain("provenance-overlay");
       expect(html).toContain("provenance-svg-layer");
       expect(html).toContain("provenance-trace-flow");
+      // Verify no moving white particles on the trail
+      expect(html).not.toContain("provenance-particle-halo");
+      expect(html).not.toContain("provenance-particle-core");
       expect(html).toContain("provenance-metric-chip");
       expect(html).toContain("BFS level:");
-      expect(html).toContain("Level 1");
+      expect(html).toContain("1");
+      // Verify colored trail retains its Search Energy accentHex
+      expect(html).toContain(`stroke="${trace!.color.accentHex}"`);
+    });
+
+    it("renders glowing white center circular dots for intermediate predecessor tiles", () => {
+      const trace = {
+        hoveredCoordinate: { row: 0, col: 2 },
+        chain: [
+          { row: 0, col: 0 },
+          { row: 0, col: 1 },
+          { row: 0, col: 2 },
+        ],
+        algorithm: "bfs" as const,
+        metric: { name: "BFS level", value: 2, badgeLabel: "2", details: "" },
+        color: {
+          progress: 0.5,
+          accentHex: "#22d3ee",
+          background: "",
+          border: "",
+          glow: "",
+          metricValue: 2,
+          metricLabel: "2",
+        },
+      };
+
+      const html = renderToStaticMarkup(
+        React.createElement(ProvenanceOverlay, {
+          trace,
+          boardWidth: 300,
+          boardHeight: 200,
+          rows: 2,
+          cols: 3,
+        }),
+      );
+
+      // Verify glowing white center dots at tile centers
+      expect(html).toContain("provenance-center-dot-group");
+      expect(html).toContain("provenance-center-dot-halo");
+      expect(html).toContain("provenance-center-dot-core");
+      expect(html).toContain('filter="url(#provenance-center-glow)"');
+      // Verify no moving white elements
+      expect(html).not.toContain("provenance-particle-halo");
+      expect(html).not.toContain("provenance-particle-core");
+    });
+
+    it("renders algorithm-explicit metric badges for DFS, Dijkstra, and A*", () => {
+      const dummyChain = [{ row: 0, col: 0 }, { row: 0, col: 1 }];
+      const dummyColor = {
+        progress: 0.5,
+        accentHex: "#10b981",
+        background: "rgba(16, 185, 129, 0.2)",
+        border: "#10b981",
+        glow: "rgba(16, 185, 129, 0.4)",
+        metricValue: 5,
+        metricLabel: "5",
+      };
+
+      // DFS
+      const dfsHtml = renderToStaticMarkup(
+        React.createElement(ProvenanceOverlay, {
+          trace: {
+            hoveredCoordinate: { row: 0, col: 1 },
+            chain: dummyChain,
+            algorithm: "dfs",
+            metric: { name: "DFS search depth", value: 14, badgeLabel: "14", details: "" },
+            color: dummyColor,
+          },
+          boardWidth: 300,
+          boardHeight: 200,
+          rows: 2,
+          cols: 3,
+        }),
+      );
+      expect(dfsHtml).toContain("DFS search depth:");
+      expect(dfsHtml).toContain("14");
+
+      // Dijkstra
+      const dijkstraHtml = renderToStaticMarkup(
+        React.createElement(ProvenanceOverlay, {
+          trace: {
+            hoveredCoordinate: { row: 0, col: 1 },
+            chain: dummyChain,
+            algorithm: "dijkstra",
+            metric: { name: "Dijkstra path cost", value: 25, badgeLabel: "25", details: "" },
+            color: dummyColor,
+          },
+          boardWidth: 300,
+          boardHeight: 200,
+          rows: 2,
+          cols: 3,
+        }),
+      );
+      expect(dijkstraHtml).toContain("Dijkstra path cost:");
+      expect(dijkstraHtml).toContain("25");
+
+      // A*
+      const astarHtml = renderToStaticMarkup(
+        React.createElement(ProvenanceOverlay, {
+          trace: {
+            hoveredCoordinate: { row: 0, col: 1 },
+            chain: dummyChain,
+            algorithm: "astar",
+            metric: {
+              name: "A* goal progress",
+              value: 0.72,
+              badgeLabel: "g: 18 · f: 25 (72%)",
+              details: "",
+            },
+            color: dummyColor,
+          },
+          boardWidth: 300,
+          boardHeight: 200,
+          rows: 2,
+          cols: 3,
+        }),
+      );
+      expect(astarHtml).toContain("A* goal progress:");
+      expect(astarHtml).toContain("g: 18 · f: 25 (72%)");
     });
 
     it("renders nothing when trace is null or board has zero dimensions", () => {
@@ -395,7 +516,7 @@ describe("Frontier Provenance & Hover Trace System", () => {
             hoveredCoordinate: { row: 0, col: 1 },
             chain: [{ row: 0, col: 0 }, { row: 0, col: 1 }],
             algorithm: "bfs",
-            metric: { name: "BFS", value: 1, badgeLabel: "1", details: "" },
+            metric: { name: "BFS level", value: 1, badgeLabel: "1", details: "" },
             color: {
               progress: 0,
               accentHex: "#22d3ee",
@@ -415,4 +536,58 @@ describe("Frontier Provenance & Hover Trace System", () => {
       expect(htmlZeroDim).toBe("");
     });
   });
+
+  describe("Reduced Motion & Style Integrity", () => {
+    it("preserves Search Energy color mapping for all algorithms without altering provenance semantics", () => {
+      const grid = gridFromRows(["S..", "..T"]);
+      const bounds = computeSearchVisualBounds(null);
+      const snapshot = createPlaybackSnapshot();
+
+      // Setup frontier nodes for bfs, dfs, dijkstra, astar
+      snapshot.nodes.set("0:1", {
+        state: "frontier",
+        parent: { row: 0, col: 0 },
+        level: 1,
+        g: 1,
+        h: 2,
+        f: 3,
+      });
+
+      for (const algo of ["bfs", "dfs", "dijkstra", "astar"] as const) {
+        const trace = extractProvenanceTrace({ row: 0, col: 1 }, snapshot, grid, algo, bounds);
+        expect(trace).not.toBeNull();
+        expect(trace!.color).toBeDefined();
+        expect(trace!.color.accentHex).toMatch(/^#[0-9a-fA-F]{6}$/);
+        // Ensure metric matches algorithm-specific label
+        switch (algo) {
+          case "bfs":
+            expect(trace!.metric.name).toBe("BFS level");
+            break;
+          case "dfs":
+            expect(trace!.metric.name).toBe("DFS search depth");
+            break;
+          case "dijkstra":
+            expect(trace!.metric.name).toBe("Dijkstra path cost");
+            break;
+          case "astar":
+            expect(trace!.metric.name).toBe("A* goal progress");
+            break;
+        }
+      }
+    });
+
+    it("verifies globals.css includes provenance flow in reduced-motion suppression", async () => {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const cssPath = path.resolve(process.cwd(), "app/globals.css");
+      const cssContent = await fs.readFile(cssPath, "utf-8");
+
+      // Verify reduced motion block disables provenance-trace-flow animation
+      expect(cssContent).toContain(".provenance-trace-flow");
+      expect(cssContent).toMatch(
+        /\.provenance-trace-flow[\s\S]*?\.provenance-target-halo[\s\S]*?animation:\s*none\s*!important/,
+      );
+    });
+  });
 });
+

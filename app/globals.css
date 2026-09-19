@@ -665,7 +665,11 @@ a {
   position: relative;
   border-radius: 0;
   margin: 0;
-  border-right-width: 0;
+  z-index: 0;
+}
+
+.playback-button-group .playback-btn:not(:first-child) {
+  margin-left: -1px;
 }
 
 .playback-button-group .playback-btn:first-child {
@@ -676,7 +680,16 @@ a {
 .playback-button-group .playback-btn:last-child {
   border-top-right-radius: var(--radius-sm);
   border-bottom-right-radius: var(--radius-sm);
-  border-right-width: 1px;
+}
+
+.playback-button-group .playback-btn.is-playing,
+.playback-button-group .playback-btn.button-primary {
+  z-index: 1;
+}
+
+.playback-button-group .playback-btn:hover:not(:disabled),
+.playback-button-group .playback-btn:focus-visible {
+  z-index: 2;
 }
 
 .playback-btn.is-playing {

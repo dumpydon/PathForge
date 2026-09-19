@@ -35,16 +35,16 @@ export function formatProvenanceMetric(
       return {
         name: "BFS level",
         value: level,
-        badgeLabel: `Level ${level}`,
+        badgeLabel: `${level}`,
         details: `Distance from Start: ${level}`,
       };
     }
     case "dfs": {
       const depth = node.level ?? 0;
       return {
-        name: "Search depth",
+        name: "DFS search depth",
         value: depth,
-        badgeLabel: `Depth ${depth}`,
+        badgeLabel: `${depth}`,
         details: `Search-tree depth: ${depth}`,
       };
     }
@@ -52,9 +52,9 @@ export function formatProvenanceMetric(
       const g = node.g ?? 0;
       const gDisplay = Number.isInteger(g) ? `${g}` : g.toFixed(1);
       return {
-        name: "Path cost",
+        name: "Dijkstra path cost",
         value: g,
-        badgeLabel: `Cost ${gDisplay}`,
+        badgeLabel: `${gDisplay}`,
         details: `Accumulated cost g(n): ${gDisplay}`,
       };
     }
@@ -67,7 +67,7 @@ export function formatProvenanceMetric(
       const gDisplay = Number.isInteger(g) ? `${g}` : g.toFixed(1);
       const fDisplay = Number.isInteger(f) ? `${f}` : f.toFixed(1);
       return {
-        name: "Goal progress",
+        name: "A* goal progress",
         value: progress,
         badgeLabel: `g: ${gDisplay} · f: ${fDisplay} (${pct}%)`,
         details: `Cost: ${gDisplay}, Heuristic: ${h.toFixed(1)}, Total: ${fDisplay}`,

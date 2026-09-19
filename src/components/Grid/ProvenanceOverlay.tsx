@@ -33,7 +33,8 @@ export const ProvenanceOverlay: FC<ProvenanceOverlayProps> = ({
   const cellHeight = (boardHeight - 1) / rows;
   const isNearTop = endPt.y < 38;
 
-  const chipLeft = Math.max(48, Math.min(boardWidth - 48, endPt.x));
+  const minChipMargin = Math.min(80, Math.max(32, Math.floor(boardWidth * 0.15)));
+  const chipLeft = Math.max(minChipMargin, Math.min(boardWidth - minChipMargin, endPt.x));
   const chipTop = isNearTop
     ? endPt.y + cellHeight / 2 + 7
     : endPt.y - cellHeight / 2 - 7;
@@ -47,15 +48,18 @@ export const ProvenanceOverlay: FC<ProvenanceOverlayProps> = ({
         viewBox={`0 0 ${boardWidth} ${boardHeight}`}
       >
         <defs>
-          <filter id="provenance-soft-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="2" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          <filter id="provenance-center-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1.0" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
         </defs>
 
         {hasMultipleNodes && pathD && (
           <>
-            {/* Luminous under-glow path */}
+            {/* Luminous under-glow path (Search Energy accent) */}
             <path
               d={pathD}
               fill="none"
@@ -66,7 +70,7 @@ export const ProvenanceOverlay: FC<ProvenanceOverlayProps> = ({
               opacity={0.28}
             />
 
-            {/* Directional animated tracer flow */}
+            {/* Directional animated tracer flow (Search Energy colored trail, no moving white parts) */}
             <path
               d={pathD}
               fill="none"
@@ -81,18 +85,34 @@ export const ProvenanceOverlay: FC<ProvenanceOverlayProps> = ({
               }}
             />
 
-            {/* Intermediate predecessor anchor dots */}
+            {/* Intermediate predecessor center circular dots with glowing halo */}
             {chain.slice(1, -1).map((coord, idx) => {
               const pt = computeCellCenter(coord, boardWidth, boardHeight, rows, cols);
               return (
-                <circle
-                  key={`prov-node-${idx}-${coord.row}-${coord.col}`}
-                  cx={pt.x}
-                  cy={pt.y}
-                  r={2.2}
-                  fill="#f0f6fc"
-                  opacity={0.75}
-                />
+                <g key={`prov-node-${idx}-${coord.row}-${coord.col}`} className="provenance-center-dot-group">
+                  {/* Soft white halo around center circular dot */}
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={3.2}
+                    fill="#ffffff"
+                    opacity={0.38}
+                    filter="url(#provenance-center-glow)"
+                    className="provenance-center-dot-halo"
+                  />
+                  {/* Crisp white center circular dot */}
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={2.2}
+                    fill="#f0f6fc"
+                    opacity={0.95}
+                    className="provenance-center-dot-core"
+                    style={{
+                      filter: "drop-shadow(0 0 1.5px rgba(255, 255, 255, 0.8))",
+                    }}
+                  />
+                </g>
               );
             })}
 
@@ -134,7 +154,7 @@ export const ProvenanceOverlay: FC<ProvenanceOverlayProps> = ({
       >
         <span className="chip-dot" />
         <span className="chip-name">{metric.name}:</span>
-        <span className="chip-value">{metric.badgeLabel.replace(`${metric.name} `, "")}</span>
+        <span className="chip-value">{metric.badgeLabel}</span>
       </div>
     </div>
   );

@@ -184,4 +184,32 @@ describe("playback controller lifecycle and timeline semantics", () => {
     expect(resultAfter.expandedCount).toBe(resultBefore.expandedCount);
     expect(resultAfter.path).toEqual(resultBefore.path);
   });
+
+  it("ensures playback button group styling preserves 4-sided borders and proper stacking", async () => {
+    const fs = await import("fs/promises");
+    const path = await import("path");
+    const cssPath = path.resolve(process.cwd(), "app/globals.css");
+    const cssContent = await fs.readFile(cssPath, "utf-8");
+
+    // Must not suppress right border on playback-btn
+    expect(cssContent).not.toMatch(
+      /\.playback-button-group\s+\.playback-btn\s*\{[^}]*border-right-width:\s*0/,
+    );
+
+    // Negative margin-left should merge 1px borders seamlessly
+    expect(cssContent).toMatch(
+      /\.playback-button-group\s+\.playback-btn:not\(:first-child\)\s*\{[^}]*margin-left:\s*-1px/,
+    );
+
+    // Active center button (is-playing / button-primary) elevated above sibling borders
+    expect(cssContent).toMatch(
+      /\.playback-button-group\s+\.playback-btn\.is-playing,\s*\.playback-button-group\s+\.playback-btn\.button-primary\s*\{[^}]*z-index:\s*1/,
+    );
+
+    // Hovered and focused buttons elevated to top layer
+    expect(cssContent).toMatch(
+      /\.playback-button-group\s+\.playback-btn:hover:not\(:disabled\),\s*\.playback-button-group\s+\.playback-btn:focus-visible\s*\{[^}]*z-index:\s*2/,
+    );
+  });
 });
+
